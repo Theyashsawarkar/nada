@@ -2,8 +2,11 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
-## Unreleased
+## v0.1.1 -- 2026-10-21
 
+- A website (GitHub Pages, https://theyashsawarkar.github.io/nada/): the README as a home page, the
+  changelog, and architecture decision records (`docs/adr/`), built from these files by
+  `scripts/build-site.py`; CI checks the site is up to date.
 - Waybar module: the bars in the accent colour; a pause sign (not flat
   bars) while paused.
 

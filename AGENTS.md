@@ -27,3 +27,4 @@ it must work on any desktop with MPD, without Vayu.
 - Test live without touching the user's screen: a headless sway
   (WLR_BACKENDS=headless) with its own D-Bus session, `grim` for screenshots,
   `wtype` for keys. Set MPD's volume to 0 first: playback is real.
+- The website (docs/, GitHub Pages) is generated: after changing README.md, CHANGELOG.md or docs/adr/, run `python3 scripts/build-site.py` and commit docs/ (CI checks it). A significant design decision gets a new ADR in docs/adr/ (next number; supersede, never rewrite).

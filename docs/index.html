@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>nada · A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.</title>
+<meta name="description" content="A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.">
+<meta property="og:title" content="nada · A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.">
+<meta property="og:description" content="A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.">
+<meta name="theme-color" content="#11111b">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/site.css">
+<style>:root{--accent:#f5c2e7;--glow:#f5c2e733}</style>
+</head>
+<body>
+<header class="top"><div class="in">
+<a class="brand" href="index.html"><img src="assets/logo.svg" alt=""><span>nada <small>नाद</small></span></a>
+<nav><a href="index.html" class="on">Overview</a><a href="changelog.html" class="">Changelog</a><a href="adr/index.html" class=" hide">Decisions</a><a class="gh" href="https://github.com/Theyashsawarkar/nada">GitHub ↗</a></nav></div></header>
+<section class="hero"><div class="in"><div>
+<div class="eyebrow">music player</div>
+<h1>nada</h1>
+<div class="sa">नाद <span>· “sound”</span></div>
+<p class="lead">A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.</p>
+<div class="cta"><a class="btn primary" href="#install">Install</a><a class="btn" href="https://github.com/Theyashsawarkar/nada">GitHub ↗</a>
+<a class="btn" href="changelog.html">What's new in v0.1.1</a></div>
+<div class="meta"><span><b>v0.1.1</b> latest</span><span><b>2</b> releases</span><span><b>6</b> decisions recorded</span><span><b>MIT</b> license</span></div>
+</div><img class="logo" src="assets/logo.svg" alt="nada logo"></div></section>
+<div class="wrap"><aside class="toc"><b>On this page</b><a class="l2" href="#features">Features</a><a class="l2" href="#install">Install</a><a class="l3" href="#requirements">Requirements</a><a class="l3" href="#nāda">nāda</a><a class="l2" href="#usage">Usage</a><a class="l2" href="#keys">Keys</a><a class="l2" href="#commands">Commands</a><a class="l2" href="#configuration">Configuration</a><a class="l2" href="#desktop-integration">Desktop integration</a><a class="l2" href="#how-it-works">How it works</a><a class="l2" href="#troubleshooting">Troubleshooting</a><a class="l2" href="#contributing">Contributing</a><a class="l2" href="#license">License</a></aside><article>
+<p align="center">
+  <img alt="nāda's Home: the lyrics of the playing song fill the left, scrolling with it; the right shows the cover, the singers, views, release date and what plays next" src="assets/screenshots/home.png" width="100%">
+</p>
+<blockquote><p><em>Nāda</em> (नाद) is Sanskrit for "sound": in Indian music theory, the primordial sound every note comes from.</p></blockquote>
+<p>nāda is a music player for people who live on the keyboard. Songs on your disk and music from YouTube share one queue. Play a song and, like YouTube, nāda lines up what comes next; reorder or remove anything with vim keys. Lyrics scroll along with the song. If you like a YouTube song, <code>D</code> saves it to your music folder, with its tags, cover and lyrics, while it keeps playing. It runs on <a href="https://www.musicpd.org">MPD</a>, so your library, queue and playback carry on with the window closed.</p>
+<h2 id="features"><a class="anchor" href="#features">#</a>Features</h2>
+<ul><li><strong>Home is the lyrics.</strong> The window opens on the playing song's lyrics, large, the current line lit and centred, scrolling with the song. Click a line to jump there. On the right: the cover, the title, the <strong>singers</strong>, the film or album, <strong>views and how long ago it came out</strong>, and the next three songs.</li><li><strong>Up next, like YouTube.</strong> Playing a YouTube song lines up YouTube's own mix for it; a song from your library brings the rest of its album and more by that artist. The queue shows what you added and what autoplay added separately, refills itself as it runs low, and <code>M</code> turns it off.</li><li><strong>Your queue, edited like text.</strong> <code>dd</code> removes, <code>J</code>/<code>K</code> move a song, <code>yy</code>/<code>p</code> copy and paste, <code>V</code> selects several, <code>u</code> undoes, <code>Ctrl+r</code> redoes, and you can drag rows by their handle or click × to remove one.</li><li><strong>Seek anywhere.</strong> <code>,</code> and <code>.</code> skip 10 seconds (<code>3.</code> skips 30), the ⟲ ⟳ buttons do the same, and the progress bar is clickable.</li><li><strong>YouTube without an account.</strong> Search in the YouTube tab (<code>3</code>) or from <a href="https://github.com/Theyashsawarkar/raga">raga</a>; every result shows its views and age. Stream links expire after a few hours, so nāda remembers the video, not the link, and renews it before it plays.</li><li><strong>Download what you like.</strong> <code>D</code> saves a YouTube song as Opus (what YouTube streams, so nothing is re-encoded) into <code>~/Music/YouTube/&lt;Artist&gt;/&lt;Title&gt;.opus</code>, with tags, cover art and a <code>.lrc</code> lyrics file. When it finishes, the queue entry is swapped for the file in place, and playback carries on from the same second.</li><li><strong>Lyrics found for you</strong>: a <code>.lrc</code> next to the song, lyrics in its tags, or <a href="https://lrclib.net">LRCLIB</a> (free and open). YouTube titles like "ROCKSTAR: Kun Faya Kun (Full Video Song)" are cleaned up first, and <code>:lyrics &lt;search&gt;</code> picks them by hand when it guesses wrong.</li><li><strong>Your library in columns</strong>, like yazi: artists, albums, genres or folders (<code>Tab</code>), <code>h</code>/<code>l</code> between columns, <code>/</code> searches everything.</li><li><strong>Playlists</strong> that mix files and YouTube songs: <code>:w name</code> saves the queue, <code>:e name</code> loads one.</li><li><strong>A mini player</strong> (<code>z</code>) in the corner, with the current lyric line.</li><li><strong>Everywhere on the desktop</strong>: MPRIS for media keys, <code>playerctl</code> and your phone (KDE Connect); a waybar module; <code>nada ctl</code> for scripts and key bindings; a notification with the cover when the song changes.</li><li><strong>Never freezes</strong>: anything slow (YouTube, lyrics, covers) runs in the background.</li></ul>
+<p align="center">
+  <img alt="The queue: played songs dimmed, the playing one highlighted, then your songs, then autoplay; each with its views and age" src="assets/screenshots/queue.png" width="49%">
+  <img alt="The queue with the lyrics on the right (L)" src="assets/screenshots/queue-lyrics.png" width="49%">
+</p>
+<p align="center">
+  <img alt="Searching YouTube: results with thumbnails, channel, views and length" src="assets/screenshots/youtube.png" width="49%">
+  <img alt="The mini player: cover, title, the current lyric line, controls" src="assets/screenshots/mini.png" width="40%">
+</p>
+<h2 id="install"><a class="anchor" href="#install">#</a>Install</h2>
+<h3 id="requirements"><a class="anchor" href="#requirements">#</a>Requirements</h3>
+<ul><li>Python 3.11+, PyGObject, GTK 4</li><li><a href="https://www.musicpd.org">MPD</a> (the engine: it plays, keeps the queue and indexes your music)</li><li><a href="https://github.com/yt-dlp/yt-dlp">yt-dlp</a> for YouTube, and ffmpeg for downloads</li><li>optional: <a href="https://github.com/wmww/gtk4-layer-shell">gtk4-layer-shell</a> (the mini player floats in a corner), mutagen (tags on downloads), a <a href="https://www.nerdfonts.com">Nerd Font</a> for the icons</li></ul>
+<pre class="code" data-lang="sh"><code># Arch
+sudo pacman -S --needed python-gobject gtk4 mpd yt-dlp ffmpeg python-mutagen gtk4-layer-shell ttf-jetbrains-mono-nerd
+systemctl --user enable --now mpd</code></pre>
+<p>MPD needs a <code>music_directory</code> and an audio output; the <a href="https://wiki.archlinux.org/title/Music_Player_Daemon">Arch wiki</a> has a five-line config. nāda finds MPD the way every MPD client does: <code>MPD_HOST</code> / <code>MPD_PORT</code>, else MPD's socket in <code>$XDG_RUNTIME_DIR/mpd/socket</code>, else <code>localhost:6600</code>.</p>
+<h3 id="nāda"><a class="anchor" href="#nāda">#</a>nāda</h3>
+<pre class="code" data-lang="sh"><code>git clone https://github.com/Theyashsawarkar/nada ~/.local/share/nada
+ln -s ~/.local/share/nada/bin/nada ~/.local/bin/nada
+nada            # opens the player (it starts itself the first time)</code></pre>
+<p>Update with <code>git -C ~/.local/share/nada pull &amp;&amp; nada quit</code>.</p>
+<h2 id="usage"><a class="anchor" href="#usage">#</a>Usage</h2>
+<pre class="code" data-lang=""><code>nada                       open the player, or close it if it&#x27;s open
+nada show | hide | mini    the full player, hidden, the mini player
+nada tab &lt;name&gt;            open on a tab: home queue library youtube playlists downloads
+nada add [--next|--play] &lt;YouTube URL | file | search words&gt;
+nada ctl toggle|play|pause|stop|next|prev
+nada ctl seek +10 | seek -10 | seek 1:30
+nada ctl vol +5 | vol -5 | vol 40
+nada status [--json]       what&#x27;s playing
+nada waybar                JSON for a waybar module
+nada daemon | quit         start / stop the player (MPD keeps playing)</code></pre>
+<p>The player is one resident process; <code>nada</code> only sends it a D-Bus message, so it opens at once. <code>ctl</code>, <code>status</code> and <code>waybar</code> talk to MPD directly and work even when the player isn't running. Closing the window (<code>q</code>, <code>Esc</code>) only hides it: the music, autoplay and downloads carry on.</p>
+<h2 id="keys"><a class="anchor" href="#keys">#</a>Keys</h2>
+<p>The footer always shows the keys for where you are; <code>?</code> shows them all. Counts work like vim: <code>5j</code>, <code>3.</code>, <code>2dd</code>.</p>
+<div class="table"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>0</code></td><td>Switch to Home (the lyrics)</td></tr><tr><td><code>1</code> <code>2</code> <code>3</code> <code>4</code> <code>5</code></td><td>Switch to the queue, library, YouTube, playlists, downloads</td></tr><tr><td><code>j / k</code></td><td>Move down / up a song (counts work: 5j)</td></tr><tr><td><code>gg / G</code></td><td>Jump to the top / bottom (12G: to the 12th)</td></tr><tr><td><code>Ctrl+d / Ctrl+u</code></td><td>Scroll half a page down / up</td></tr><tr><td><code>Enter</code></td><td>Play the selected song</td></tr><tr><td><code>Space</code></td><td>Toggle play / pause</td></tr><tr><td><code>. / ,</code></td><td>Seek forward / back 10 seconds (3. = 30 s)</td></tr><tr><td><code>&gt; / &lt;</code></td><td>Play next / previous song</td></tr><tr><td><code>= / -</code></td><td>Raise / lower volume</td></tr><tr><td><code>m</code></td><td>Toggle mute</td></tr><tr><td><code>s</code></td><td>Toggle shuffle</td></tr><tr><td><code>r</code></td><td>Cycle repeat (off, all, this song)</td></tr><tr><td><code>M</code></td><td>Toggle autoplay (more like this after your songs)</td></tr><tr><td><code>V</code></td><td>Select several songs (visual mode)</td></tr><tr><td><code>u</code></td><td>Restore the last change (undo)</td></tr><tr><td><code>Ctrl+r</code></td><td>Restore an undone change (redo)</td></tr><tr><td><code>/</code></td><td>Search (the list; YouTube on 3; your library on 2)</td></tr><tr><td><code>n / N</code></td><td>Jump to the next / previous search match</td></tr><tr><td><code>:</code></td><td>Run a command (:w name, :sleep 30m, :yt query…)</td></tr><tr><td><code>?</code></td><td>Show all keys</td></tr><tr><td><code>z</code></td><td>Switch to the mini player</td></tr><tr><td><code>q / Esc</code></td><td>Close the window (the music keeps playing)</td></tr></tbody></table></div>
+<p><strong>Queue</strong> (<code>1</code>)</p>
+<div class="table"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>dd</code></td><td>Remove the song from the queue (V: the selection)</td></tr><tr><td><code>yy</code></td><td>Copy the song (yank)</td></tr><tr><td><code>p / P</code></td><td>Paste removed or copied songs below / above</td></tr><tr><td><code>J / K</code></td><td>Move the song down / up</td></tr><tr><td><code>A</code></td><td>Move the song to play next</td></tr><tr><td><code>D</code></td><td>Save the YouTube song to your music folder (download)</td></tr><tr><td><code>L</code></td><td>Show the lyrics on the right</td></tr><tr><td><code>zz</code></td><td>Jump to the song that's playing</td></tr></tbody></table></div>
+<p><strong>Library</strong> (<code>2</code>), <strong>YouTube</strong> (<code>3</code>), <strong>Downloads</strong> (<code>5</code>)</p>
+<div class="table"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>h / l</code></td><td>Move between the columns</td></tr><tr><td><code>Tab</code></td><td>Switch between artists, albums, genres and folders</td></tr><tr><td><code>a / A</code></td><td>Add to the end of the queue / to play next</td></tr><tr><td><code>D</code></td><td>Save the result to your music folder (download)</td></tr><tr><td><code>r</code></td><td>Restart a failed download</td></tr><tr><td><code>dd</code></td><td>Delete the saved file (asks first)</td></tr></tbody></table></div>
+<p><strong>Mini player</strong> (<code>z</code>)</p>
+<div class="table"><table><thead><tr><th>Key</th><th>Action</th></tr></thead><tbody><tr><td><code>Space</code></td><td>Toggle play / pause</td></tr><tr><td><code>. / ,</code></td><td>Seek forward / back 10 seconds</td></tr><tr><td><code>&gt; / &lt;</code></td><td>Play next / previous song</td></tr><tr><td><code>z / Enter</code></td><td>Switch back to the full player</td></tr><tr><td><code>q / Esc</code></td><td>Close the mini player (the music keeps playing)</td></tr></tbody></table></div>
+<h2 id="commands"><a class="anchor" href="#commands">#</a>Commands</h2>
+<p>Typed after <code>:</code>, like vim.</p>
+<div class="table"><table><thead><tr><th>Command</th><th>Does</th></tr></thead><tbody><tr><td><code>:w &lt;name&gt;</code></td><td>Save the queue as a playlist (YouTube songs included)</td></tr><tr><td><code>:e &lt;name&gt;</code></td><td>Replace the queue with a playlist (<code>:e</code> alone opens Playlists)</td></tr><tr><td><code>:yt &lt;search&gt;</code></td><td>Play the top YouTube result, and its mix after it</td></tr><tr><td><code>:play &lt;search&gt;</code></td><td>Play a song from your library (falls back to YouTube)</td></tr><tr><td><code>:add &lt;url or search&gt;</code></td><td>Add to the end of the queue</td></tr><tr><td><code>:seek 1:30</code> · <code>:seek +30</code></td><td>Jump to a time, or by an amount</td></tr><tr><td><code>:vol 40</code> · <code>:vol +10</code></td><td>Set or change the volume</td></tr><tr><td><code>:sleep 30m</code> · <code>:sleep off</code></td><td>Fade out and pause after a while</td></tr><tr><td><code>:lyrics &lt;search&gt;</code></td><td>Pick the lyrics by hand (remembered for the song)</td></tr><tr><td><code>:autoplay on</code> · <code>off</code></td><td>Same as <code>M</code></td></tr><tr><td><code>:dl</code></td><td>Download the playing song</td></tr><tr><td><code>:clear</code></td><td>Empty the queue (<code>u</code> brings it back)</td></tr><tr><td><code>:q</code> · <code>:qa</code></td><td>Hide the window · quit the player</td></tr></tbody></table></div>
+<h2 id="configuration"><a class="anchor" href="#configuration">#</a>Configuration</h2>
+<p>Everything is optional, in <code>~/.config/nada/config.toml</code>:</p>
+<pre class="code" data-lang="toml"><code>[nada]
+autoplay = true          # line up more songs after yours (M toggles it, and it&#x27;s remembered)
+download_dir = &quot;YouTube&quot; # inside MPD&#x27;s music directory
+format = &quot;opus&quot;          # opus (no re-encoding) | mp3 | m4a
+seek_step = 10           # seconds for , and .
+volume_step = 5
+notify = true            # a notification when the song changes (while the window is hidden)
+opacity = 0.62           # window background: 1 is solid, lower shows the blur behind it
+music_dir = &quot;&quot;           # default: MPD&#x27;s music_directory</code></pre>
+<p><code>~/.config/nada/style.css</code> is loaded last, to restyle anything (the default look is Catppuccin Mocha with a mauve accent: see <code>nada/style.css</code>).</p>
+<h2 id="desktop-integration"><a class="anchor" href="#desktop-integration">#</a>Desktop integration</h2>
+<p><strong>sway</strong> (the same works with any compositor's key bindings):</p>
+<pre class="code" data-lang="sh"><code>exec nada daemon
+bindsym $mod+Shift+m exec nada                       # open / hide
+bindsym $mod+Mod1+space exec nada ctl toggle          # without opening anything
+bindsym $mod+Mod1+period exec nada ctl next
+bindsym $mod+Mod1+comma exec nada ctl prev
+for_window [app_id=&quot;^dev\.vayu\.Nada$&quot;] floating enable, resize set 1180 720, move position center</code></pre>
+<p>Media keys going through <code>playerctl</code> work as they are: nāda speaks MPRIS. On SwayFX, <code>blur enable, corner_radius 20</code> in that <code>for_window</code> rule gives the window its glass look; the mini player is a layer-shell surface named <code>nada</code> (<code>layer_effects &quot;nada&quot; { blur enable; corner_radius 18; }</code>).</p>
+<p><strong>waybar</strong>, a module that shows what's playing (and disappears when nothing is):</p>
+<pre class="code" data-lang="jsonc"><code>&quot;custom/nada&quot;: {
+  &quot;exec&quot;: &quot;nada waybar&quot;,
+  &quot;return-type&quot;: &quot;json&quot;,
+  &quot;on-click&quot;: &quot;nada ctl toggle&quot;,
+  &quot;on-click-middle&quot;: &quot;nada ctl next&quot;,
+  &quot;on-click-right&quot;: &quot;nada&quot;,
+  &quot;on-scroll-up&quot;: &quot;nada ctl seek +10&quot;,
+  &quot;on-scroll-down&quot;: &quot;nada ctl seek -10&quot;
+}</code></pre>
+<p>Its <code>class</code> is <code>play</code>, <code>pause</code> or <code>stopped</code>, to style each state.</p>
+<p><strong>From other tools</strong>: <code>nada add --play &lt;url&gt;</code> plays a YouTube link with its mix after it; <a href="https://github.com/Theyashsawarkar/raga">raga</a>, the YouTube search panel, uses exactly that.</p>
+<h2 id="how-it-works"><a class="anchor" href="#how-it-works">#</a>How it works</h2>
+<pre class="code" data-lang=""><code> raga, keys, waybar ──► nada (bin/nada: D-Bus) ──► the player process ──► MPD ──► speakers
+                                                    │
+                                                    ├─ yt-dlp: search, mixes, stream links, downloads
+                                                    ├─ LRCLIB: lyrics
+                                                    └─ MPRIS: media keys, phone, playerctl</code></pre>
+<ul><li><code>nada/core.py</code> is the model: MPD's queue and state, plus what MPD doesn't do (YouTube songs and their expiring links, autoplay, undo, downloads, lyrics, covers). Slow work runs on worker threads and reports back on the GTK main loop.</li><li><code>nada/window.py</code> is the window and the vim key engine (modes, counts, pending operators, registers); <code>nada/views.py</code> the six tabs and the right pane; <code>nada/mini.py</code> the mini player; <code>nada/mpris.py</code> MPRIS.</li><li>YouTube songs sit in MPD's queue as stream URLs, tagged with their video id, so other MPD clients see and play them too.</li></ul>
+<h2 id="troubleshooting"><a class="anchor" href="#troubleshooting">#</a>Troubleshooting</h2>
+<ul><li><strong>"MPD isn't running".</strong> <code>systemctl --user start mpd</code> (and <code>enable</code> it). nāda reconnects by itself.</li><li><strong>No sound but it says it's playing.</strong> That's MPD's audio output: check <code>audio_output</code> in your <code>mpd.conf</code> (PipeWire users: <code>type &quot;pipewire&quot;</code> or <code>&quot;pulse&quot;</code>).</li><li><strong>"Volume control unavailable".</strong> Your MPD output has no mixer; set <code>mixer_type &quot;software&quot;</code> in its <code>audio_output</code> block.</li><li><strong>A YouTube song won't play.</strong> Update yt-dlp first (<code>yt-dlp -U</code>, or your package manager): YouTube changes often and yt-dlp follows.</li><li><strong>Wrong or missing lyrics.</strong> <code>:lyrics &lt;artist&gt; &lt;song&gt;</code> picks them by hand.</li><li><strong>Anything else.</strong> <code>~/.local/state/nada/daemon.log</code> has the details; please <a href="https://github.com/Theyashsawarkar/nada/issues/new/choose">open an issue</a> with it.</li></ul>
+<h2 id="contributing"><a class="anchor" href="#contributing">#</a>Contributing</h2>
+<p>Bug reports, ideas and pull requests are welcome: see <a href="https://github.com/Theyashsawarkar/nada/blob/main/CONTRIBUTING.md">CONTRIBUTING.md</a> for the development setup and the rules the code follows, and <a href="changelog.html">CHANGELOG.md</a> for what changed in each release. Please report security issues privately (<a href="https://github.com/Theyashsawarkar/nada/blob/main/SECURITY.md">SECURITY.md</a>).</p>
+<p>nāda is part of <a href="https://github.com/Theyashsawarkar/vayu">Vayu</a>, a keyboard-driven Wayland desktop, and works on its own on any desktop with MPD.</p>
+<h2 id="license"><a class="anchor" href="#license">#</a>License</h2>
+<p><a href="https://github.com/Theyashsawarkar/nada/blob/main/LICENSE">MIT</a></p>
+</article></div>
+<footer><div class="in"><div><h4>Desktop</h4><a href="https://theyashsawarkar.github.io/vayu/" class="">vayu <span>वायु · the keyboard-driven Wayland desktop</span></a></div><div><h4>Apps</h4><a href="https://theyashsawarkar.github.io/nada/" class="me">nada <span>नाद · music player</span></a><a href="https://theyashsawarkar.github.io/sangam/" class="">sangam <span>संगम · pull requests in the terminal</span></a><a href="https://theyashsawarkar.github.io/anumati/" class="">anumati <span>अनुमति · root commands for AI agents</span></a></div><div><h4>Vyom</h4><a href="https://theyashsawarkar.github.io/vyom/" class="">vyom <span>व्योम · panels runtime</span></a></div><div><h4>Vyom tools</h4><a href="https://theyashsawarkar.github.io/dvara/" class="">dvara <span>द्वार · apps</span></a><a href="https://theyashsawarkar.github.io/ganit/" class="">ganit <span>गणित · calculator</span></a><a href="https://theyashsawarkar.github.io/smriti/" class="">smriti <span>स्मृति · clipboard</span></a><a href="https://theyashsawarkar.github.io/bhava/" class="">bhava <span>भाव · emoji</span></a><a href="https://theyashsawarkar.github.io/tarang/" class="">tarang <span>तरंग · Wi‑Fi</span></a><a href="https://theyashsawarkar.github.io/setu/" class="">setu <span>सेतु · Bluetooth</span></a><a href="https://theyashsawarkar.github.io/doot/" class="">doot <span>दूत · phone</span></a><a href="https://theyashsawarkar.github.io/patra/" class="">patra <span>पात्र · Docker</span></a><a href="https://theyashsawarkar.github.io/suchana/" class="">suchana <span>सूचना · notifications</span></a><a href="https://theyashsawarkar.github.io/raga/" class="">raga <span>राग · YouTube</span></a><a href="https://theyashsawarkar.github.io/mudra/" class="">mudra <span>मुद्रा · keybindings</span></a><a href="https://theyashsawarkar.github.io/urja/" class="">urja <span>ऊर्जा · battery</span></a><a href="https://theyashsawarkar.github.io/vishram/" class="">vishram <span>विश्राम · power menu</span></a><a href="https://theyashsawarkar.github.io/kendra/" class="">kendra <span>केन्द्र · quick settings</span></a></div></div>
+<div class="bottom">nada is free software under the MIT license · <a href="https://github.com/Theyashsawarkar/nada">source</a> · <a href="https://github.com/Theyashsawarkar/nada/issues">issues</a> · <a href="changelog.html">changelog</a> · part of <a href="https://theyashsawarkar.github.io/vayu/">Vayu</a></div></footer>
+<script>
+document.querySelectorAll('pre.code').forEach(p=>{const b=document.createElement('button');b.className='copy';b.textContent='Copy';
+b.onclick=()=>{navigator.clipboard.writeText(p.innerText.replace(/^Copy/,'')).then(()=>{b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1200)})};p.appendChild(b)});
+const links=[...document.querySelectorAll('.toc a')];if(links.length){const hs=links.map(a=>document.getElementById(a.hash.slice(1))).filter(Boolean);
+const on=()=>{let cur=hs[0];for(const h of hs){if(h.getBoundingClientRect().top<120)cur=h}links.forEach(a=>a.classList.toggle('on',cur&&a.hash==='#'+cur.id))};
+addEventListener('scroll',on,{passive:true});on()}
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+# The project website (docs/, GitHub Pages): built by scripts/build-site.py
+name = "nada"
+sanskrit = "नाद"
+meaning = "sound"
+tagline = "A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads."
+color = "pink"
+kind = "music player"
+logo = "assets/logo.svg"
