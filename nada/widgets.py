@@ -15,6 +15,19 @@ G = {
 PALETTE = ["#f9e2af", "#fab387", "#f38ba8", "#cba6f7", "#89b4fa", "#94e2d5", "#a6e3a1", "#89dceb", "#f5c2e7", "#b4befe"]
 
 
+def theme_palette():
+    """Placeholder cover colours from the current theme (varna), else Catppuccin's."""
+    try:
+        from .app import theme_path
+        import json
+        with open(theme_path()) as f:
+            data = json.load(f)
+        c = ((data.get("tools") or {}).get("nada") or data)["colors"]
+        return [c[k] for k in ("yellow", "peach", "red", "mauve", "blue", "teal", "green", "sky", "pink", "lavender")]
+    except (OSError, ValueError, KeyError, TypeError, ImportError):
+        return PALETTE
+
+
 def label(text="", cls=None, xalign=0.0, ellipsize=True, wrap=False, markup=False, **kw):
     w = Gtk.Label(xalign=xalign, **kw)
     if markup:
@@ -67,7 +80,8 @@ def initials(title):
 
 
 def tile_color(key):
-    return PALETTE[int(hashlib.md5((key or "").encode()).hexdigest(), 16) % len(PALETTE)]
+    pal = theme_palette()
+    return pal[int(hashlib.md5((key or "").encode()).hexdigest(), 16) % len(pal)]
 
 
 _tile_css = {}

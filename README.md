@@ -250,7 +250,10 @@ music_dir = ""           # default: MPD's music_directory
 ```
 
 `~/.config/nada/style.css` is loaded last, to restyle anything (the default
-look is Catppuccin Mocha with a mauve accent: see `nada/style.css`).
+look is Catppuccin Mocha with a mauve accent: see `nada/style.css`). With
+[varna](https://github.com/Theyashsawarkar/varna) installed, nāda takes the
+current theme's colours instead (`varna tool nada <theme>` gives it its own)
+and restyles as soon as the theme changes.
 
 ## Desktop integration
 

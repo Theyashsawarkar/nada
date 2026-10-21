@@ -43,18 +43,33 @@ class App(Gtk.Application):
 
     def load_css(self):
         css = open(os.path.join(HERE, "style.css")).read()
+        css += theme_css()
         try:
             from .config import load
             op = min(1.0, max(0.3, float(load().get("opacity", 0.62))))
         except (TypeError, ValueError):
             op = 0.62
-        css += f"\n.nada-root {{ background-color: alpha(#1e1e2e, {op:.2f}); }}\n"
+        css += f"\n.nada-root {{ background-color: alpha(@base, {op:.2f}); }}\n"
         user = os.path.join(os.path.dirname(CONFIG), "style.css")
         if os.path.exists(user):
             css += open(user).read()
-        p = Gtk.CssProvider()
-        p.load_from_string(css)
-        Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), p, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        if getattr(self, "css_provider", None) is None:
+            self.css_provider = Gtk.CssProvider()
+            Gtk.StyleContext.add_provider_for_display(Gdk.Display.get_default(), self.css_provider,
+                                                      Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+            self.watch_theme()
+        self.css_provider.load_from_string(css)
+
+    def watch_theme(self):
+        """Restyles when the theme changes (varna rewrites palette.json)."""
+        path = theme_path()
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            self.theme_monitor = Gio.File.new_for_path(path).monitor_file(Gio.FileMonitorFlags.NONE, None)
+            self.theme_monitor.connect("changed", lambda _m, _f, _o, ev: ev in (
+                Gio.FileMonitorEvent.CHANGES_DONE_HINT, Gio.FileMonitorEvent.CREATED) and self.load_css())
+        except GLib.Error:
+            pass
 
     # ------------------------------------------------------------ windows
     def ensure_window(self):
@@ -126,3 +141,29 @@ class App(Gtk.Application):
 def main():
     app = App()
     return app.run([sys.argv[0]])
+
+
+# The theme: with varna (github.com/Theyashsawarkar/varna) installed, nāda
+# takes the current theme's colours (its own pick under `tools.nada`, else
+# the desktop's); without it, style.css's Catppuccin Mocha.
+THEME_NAMES = {"text": "text", "sub1": "subtext1", "sub0": "subtext0", "ov1": "overlay1", "ov0": "overlay0",
+               "s1": "surface1", "s0": "surface0", "base": "base", "crust": "crust", "mauve": "accent", "pink": "pink",
+               "red": "red", "peach": "peach", "yellow": "yellow", "green": "green", "teal": "teal", "sky": "sky",
+               "blue": "blue", "lavender": "lavender"}
+
+
+def theme_path():
+    return os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "varna", "palette.json")
+
+
+def theme_css():
+    import json
+    try:
+        with open(theme_path()) as f:
+            data = json.load(f)
+        colors = ((data.get("tools") or {}).get("nada") or data)["colors"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return ""
+    return "\n" + "\n".join(f"@define-color {ours} {colors[theirs]};" for ours, theirs in THEME_NAMES.items()
+                             if str(colors.get(theirs, "")).startswith("#")) + "\n"
+

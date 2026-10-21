@@ -2,6 +2,14 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.1.2 -- 2026-10-21
+
+- **Follows your theme**: with [varna](https://github.com/Theyashsawarkar/varna)
+  installed, nāda takes the current theme's colours (its own pick under
+  `tools.nada`, else the desktop's), accent included, and restyles the
+  moment the theme changes, while it plays. Without varna, nothing changes.
+- Placeholder covers use the theme's colours too.
+
 ## v0.1.1 -- 2026-10-21
 
 - A website (GitHub Pages, https://theyashsawarkar.github.io/nada/): the README as a home page, the
