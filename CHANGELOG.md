@@ -2,6 +2,11 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## Unreleased
+
+- Waybar module: the bars in the accent colour; a pause sign (not flat
+  bars) while paused.
+
 ## v0.1.0 -- 2026-10-21
 
 First release.

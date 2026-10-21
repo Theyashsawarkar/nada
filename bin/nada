@@ -193,7 +193,7 @@ def waybar():
             if song:
                 title = song.get("Title") or os.path.splitext(os.path.basename(song.get("file", "")))[0]
                 title = title if len(title) <= 28 else title[:27] + "…"
-                icon = frames[frame % len(frames)] if state == "play" else "▂▂▂"
+                icon = frames[frame % len(frames)] if state == "play" else "\U000f03e4"   # moving bars, or a pause sign
                 dl = ""
                 try:
                     active = json.load(open(os.path.join(CACHE, "downloads.json")))
