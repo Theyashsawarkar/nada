@@ -210,7 +210,11 @@ def waybar():
         except Exception:
             c = None
         esc = lambda t: t.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-        line = json.dumps({**out, "text": esc(out["text"]), "tooltip": esc(out["tooltip"])})
+        text = out["text"]
+        if text:   # the bars in the accent colour, the title as plain text
+            bars, _, rest = text.partition("  ")
+            text = f"<span color='#CBA6F7'>{esc(bars)}</span>  {esc(rest)}"
+        line = json.dumps({**out, "text": text, "tooltip": esc(out["tooltip"])})
         if line != last:
             try:
                 print(line, flush=True)
