@@ -155,6 +155,8 @@ Counts work like vim: `5j`, `3.`, `2dd`.
 
 | Key | Action |
 |---|---|
+| `Ctrl+Tab / Ctrl+Shift+Tab` | Switch to the next / previous tab (wraps around) |
+| `Ctrl+0..5` | Switch to that numbered tab at once (the number shown on it) |
 | `0` | Switch to Home (the lyrics) |
 | `1` `2` `3` `4` `5` | Switch to the queue, library, YouTube, playlists, downloads |
 | `j / k` | Move down / up a song (counts work: 5j) |
@@ -200,7 +202,7 @@ Counts work like vim: `5j`, `3.`, `2dd`.
 | `Tab` | Switch between artists, albums, genres and folders |
 | `a / A` | Add to the end of the queue / to play next |
 | `D` | Save the result to your music folder (download) |
-| `r` | Restart a failed download |
+| `R` | Restart a failed download |
 | `dd` | Delete the saved file (asks first) |
 
 **Mini player** (`z`)

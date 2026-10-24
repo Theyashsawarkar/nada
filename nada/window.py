@@ -10,6 +10,8 @@ from .core import fmt_time
 from .views import Downloads, Home, Library, NowPane, Playlists, Queue, YouTube
 from .widgets import G, box, hint, keycap, label
 
+# keybind: Nada/everywhere | Ctrl+Tab / Ctrl+Shift+Tab | Switch to the next / previous tab (wraps around)
+# keybind: Nada/everywhere | Ctrl+0..5 | Switch to that numbered tab at once (the number shown on it)
 # keybind: Nada/everywhere | 0 | Switch to Home (the lyrics)
 # keybind: Nada/everywhere | 1 | Switch to the queue
 # keybind: Nada/everywhere | 2 | Switch to the library
@@ -50,7 +52,7 @@ from .widgets import G, box, hint, keycap, label
 # keybind: Nada/library | a / A | Add to the end of the queue / to play next
 # keybind: Nada/youtube | a / A | Add the result to the end of the queue / to play next
 # keybind: Nada/youtube | D | Save the result to your music folder (download)
-# keybind: Nada/downloads | r | Restart a failed download
+# keybind: Nada/downloads | R | Restart a failed download
 # keybind: Nada/downloads | dd | Delete the saved file (asks first)
 
 TABS = ["home", "queue", "library", "youtube", "playlists", "downloads"]
@@ -377,6 +379,17 @@ class Window(Gtk.ApplicationWindow):
     def _key(self, ctrl, keyval, code, state):
         name = Gdk.keyval_name(keyval) or ""
         ctrl_on = bool(state & Gdk.ModifierType.CONTROL_MASK)
+        # Tabs, the same keys as Vyom's panels, from anywhere (even the
+        # search box): Ctrl+Tab / Ctrl+Shift+Tab cycle, Ctrl+0..5 jump at
+        # once (a bare digit waits a moment, in case it's a count like 5j).
+        if ctrl_on and name in ("Tab", "ISO_Left_Tab"):
+            back = name == "ISO_Left_Tab" or bool(state & Gdk.ModifierType.SHIFT_MASK)
+            i = TABS.index(self.tab) if self.tab in TABS else 0
+            self.switch(TABS[(i + (-1 if back else 1)) % len(TABS)])
+            return True
+        if ctrl_on and re.fullmatch(r"[0-5]", name):
+            self.switch(TABS[int(name)])
+            return True
         focus = self.get_focus()
         yt_entry = self.views["youtube"].entry
         # typing into the command line or the YouTube search box

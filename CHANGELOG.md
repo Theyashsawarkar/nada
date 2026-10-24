@@ -2,6 +2,14 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.1.5 -- 2026-10-24
+
+- **Tabs like Vyom's**: `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle them and
+  `Ctrl+0..5` jump to one at once, from anywhere (the search box too). A
+  bare digit still switches, after a moment (it may be a count, like `5j`).
+- Downloads: **`R`** restarts a failed download; it was `r`, which cycles
+  repeat everywhere else, so on a failed row the same key did something else.
+
 ## v0.1.4 -- 2026-10-24
 
 - **The same glass as Vyom's panels**: without an `opacity` of your own in

@@ -666,7 +666,7 @@ class Playlists(View):
 # ===================================================================== downloads
 class Downloads(View):
     name, title, glyph = "downloads", "Downloads", G["dl"]
-    hints = [("Enter", "play"), ("r", "retry"), ("dd", "delete the file")]
+    hints = [("Enter", "play"), ("R", "retry"), ("dd", "delete the file")]
 
     def __init__(self, win):
         super().__init__(win)
@@ -725,7 +725,8 @@ class Downloads(View):
         if k == "Return":
             self._play(d)
             return True
-        if k == "r" and "job" in d:
+        # R, not r: r cycles repeat everywhere, this row or not.
+        if k == "R" and "job" in d:
             self.core.retry(d["job"])
             return True
         if k == "dd" and "saved" in d:
