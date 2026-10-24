@@ -322,7 +322,7 @@ class Library(View):
                      for i in range(3)]
         self.heads = [label("", "sect") for _ in range(3)]
         self.frames = []
-        for i, (h, c) in enumerate(zip(self.heads, self.cols)):
+        for i, (h, c) in enumerate(zip(self.heads, self.cols, strict=True)):
             f = box(h, c, vertical=True, hexpand=True, cls="col")
             if i == 2:
                 f.remove_css_class("col")
@@ -415,7 +415,6 @@ class Library(View):
         c = self.core
         if not d:
             return False
-        mode = self.MODES[self.mode]
 
         def work():
             if d["kind"] == "artist":

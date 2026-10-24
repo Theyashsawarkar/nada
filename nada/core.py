@@ -210,7 +210,6 @@ class Core:
     def _load_queue(self):
         items = self.c.queue()
         q = []
-        dirty = False
         for it in items:
             sid = it.get("Id")
             uri = it.get("file", "")
@@ -254,7 +253,6 @@ class Core:
         alive = {s["id"] for s in q}
         for sid in [k for k in self.meta if k not in alive]:
             del self.meta[sid]
-            dirty = True
         self.queue = q
         self._persist_meta()
 
@@ -499,9 +497,9 @@ class Core:
             ids = [it["Id"] for it in q if it.get("file") in files][-len(op[1]):]
             dst.append(("add", ids, [e for _, e in op[1]], op[1][0][0]))
         elif op[0] == "add":
-            ids, entries, pos = op[1], op[2], op[3]
+            ids, entries = op[1], op[2]
             q = {it["Id"]: int(it["Pos"]) for it in self.c.queue()}
-            removed = [(q[i], e) for i, e in zip(ids, entries) if i in q]
+            removed = [(q[i], e) for i, e in zip(ids, entries, strict=False) if i in q]
             for i in ids:
                 if i in q:
                     self.cmd("deleteid", i)
@@ -549,7 +547,7 @@ class Core:
             # resolve on our own small pool (the shared one runs this very function)
             with concurrent.futures.ThreadPoolExecutor(max_workers=4) as ex:
                 futs = [ex.submit(youtube.resolve, e["yt"]) for e in entries]
-                for e, f in zip(entries, futs):
+                for e, f in zip(entries, futs, strict=True):
                     try:
                         out.append(f.result())
                     except Exception as err:
@@ -571,7 +569,7 @@ class Core:
                 except MPDError:
                     pos = None
             new = []
-            for i, r in enumerate(ok):
+            for r in ok:
                 meta = {k: r.get(k) for k in ("yt", "title", "artist", "album", "duration", "thumb", "expire", "views",
                                               "likes", "uploaded", "channel", "singers", "movie", "cast")}
                 meta["auto"] = auto

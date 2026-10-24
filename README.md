@@ -159,7 +159,8 @@ only hides it: the music, autoplay and downloads carry on.
 ## Keys
 
 The footer always shows the keys for where you are; `?` shows them all.
-Counts work like vim: `5j`, `3.`, `2dd`. Everywhere: `/` searches, `Esc` goes back or closes,
+Counts work like vim: `5j`, `3.`, `2dd` (a tab number followed by a key that takes no count, or a
+lone `1`, goes to that tab). Everywhere: `/` searches, `Esc` goes back or closes,
 `j`/`k` move, `Enter` does the main thing; while typing, `Ctrl+j`/`Ctrl+k` move.
 
 | Key | Action |

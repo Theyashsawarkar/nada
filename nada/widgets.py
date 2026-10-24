@@ -289,7 +289,7 @@ class LyricsView(Gtk.Box):
             self.inner.append(lab)
             self.top_spacer.set_size_request(-1, 120)
             return
-        for i, (t, text) in enumerate(self.lines):
+        for t, text in self.lines:
             gap = text.strip() in ("", "♪") or text.strip().startswith("♪")
             lab = label(text if text.strip() else "♪", "line" if self.synced else "plain", wrap=True)
             if gap:

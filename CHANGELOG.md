@@ -2,6 +2,15 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.2.1 -- 2026-10-24
+
+- A tab number followed by a key that takes no count (`V`, `Esc`, `/`…),
+  or a lone `1`, goes to that tab first (it ran the key on the tab you
+  were on).
+- Switching the search panel to Commands clears the box and lists every
+  command; its thumbnails appear as they load; toasts show above it.
+- Tidied unused code the linter found (no change in behaviour).
+
 ## v0.2.0 -- 2026-10-24
 
 - **Search from anywhere** (`/`): a floating panel over whatever you're on.

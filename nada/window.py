@@ -71,6 +71,10 @@ from .widgets import G, box, hint, keycap, label, picture, tile
 # keybind: Nada/search | Ctrl+x | Clear recent searches
 # keybind: Nada/search | Esc | Close the search panel
 
+# Keys a count can go before (5j, 3., 2dd); after any other key, a lone
+# number is the tab it names.
+COUNTED = {"j", "k", "h", "l", "G", "g", "d", "y", ".", ",", ">", "<", "=", "+", "-", "[", "]", "{", "}", "J", "K",
+           "x", "p", "P", "u", "C-d", "C-u", "C-r", "Page_Down", "Page_Up", "D", "A", "a"}
 TABS = ["home", "queue", "library", "playlists", "downloads"]   # YouTube's results: a page, from the search panel
 KEYNAMES = {"space": " ", "period": ".", "comma": ",", "greater": ">", "less": "<", "equal": "=", "plus": "+",
             "minus": "-", "slash": "/", "colon": ":", "question": "?", "KP_Enter": "Return", "Up": "k", "Down": "j",
@@ -182,6 +186,9 @@ class Window(Gtk.ApplicationWindow):
         self.search.set_margin_top(64)
         self.search.set_visible(False)
         overlay.add_overlay(self.search)
+        # toasts above everything, the search panel included
+        overlay.remove_overlay(self.toast_rev)
+        overlay.add_overlay(self.toast_rev)
 
         keys = Gtk.EventControllerKey()
         keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
@@ -563,6 +570,7 @@ class Window(Gtk.ApplicationWindow):
 
     def _thumbs_ready(self):
         self.thumb_timer = None
+        self.search.refresh_thumbs()
         for name in ("queue", "youtube"):
             self.views[name].refresh("thumbs")
         self.now.refresh("queue")
@@ -654,6 +662,13 @@ class Window(Gtk.ApplicationWindow):
         if self.digit_timer:
             GLib.source_remove(self.digit_timer)
             self.digit_timer = None
+            # A lone tab number followed by a key that takes no count (V, Esc,
+            # /, Tab…), or a 1 (a count of one changes nothing): the number
+            # meant the tab. Go there, then do the key.
+            if re.fullmatch(r"[1-4]", self.count) and (k not in COUNTED or self.count == "1"):
+                tab, self.count = self.count, ""
+                self._show_pending()
+                self.switch(TABS[int(tab)])
         n = int(self.count or "1")
         had_count = bool(self.count)
         self.count = ""
