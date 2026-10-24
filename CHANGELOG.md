@@ -2,6 +2,12 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.1.4 -- 2026-10-24
+
+- **The same glass as Vyom's panels**: without an `opacity` of your own in
+  config.toml, the window takes varna's `ui.glass` (varna 0.1.9), shared by
+  Vyom, vinyasa and the notifications. Without varna: 0.62, as before.
+
 ## v0.1.3 -- 2026-10-24
 
 - **Background failures are reported again.** Every failed background job

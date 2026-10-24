@@ -46,7 +46,8 @@ class App(Gtk.Application):
         css += theme_css()
         try:
             from .config import load
-            op = min(1.0, max(0.3, float(load().get("opacity", 0.62))))
+            op = load().get("opacity")
+            op = min(1.0, max(0.3, float(theme_glass() if op is None else op)))
         except (TypeError, ValueError):
             op = 0.62
         css += f"\n.nada-root {{ background-color: alpha(@base, {op:.2f}); }}\n"
@@ -156,6 +157,17 @@ THEME_NAMES = {"text": "text", "sub1": "subtext1", "sub0": "subtext0", "ov1": "o
 
 def theme_path():
     return os.path.join(os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "varna", "palette.json")
+
+
+def theme_glass():
+    """The panels' glass from varna (ui.glass), so this window looks like
+    Vyom's panels; 0.62 without varna."""
+    import json
+    try:
+        with open(theme_path()) as f:
+            return float(json.load(f)["ui"]["glass"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return 0.62
 
 
 def theme_css():

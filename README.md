@@ -246,6 +246,7 @@ seek_step = 10           # seconds for , and .
 volume_step = 5
 notify = true            # a notification when the song changes (while the window is hidden)
 opacity = 0.62           # window background: 1 is solid, lower shows the blur behind it
+                         # (unset: your varna theme's panel glass, so it matches Vyom's panels)
 music_dir = ""           # default: MPD's music_directory
 ```
 

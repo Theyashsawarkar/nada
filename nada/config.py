@@ -7,7 +7,8 @@
   seek_step = 10           # seconds for , and .
   volume_step = 5
   notify = true            # a notification when the song changes (player hidden)
-  opacity = 0.62           # window background: 1 solid, lower shows the blur
+  # opacity = 0.62         # window background: 1 solid, lower shows the blur
+                           # (unset: the theme's panel glass, with varna; else 0.62)
   music_dir = ""           # default: MPD's music_directory
 """
 import os
@@ -25,7 +26,7 @@ DEFAULTS = {
     "seek_step": 10,
     "volume_step": 5,
     "notify": True,
-    "opacity": 0.62,
+    "opacity": None,       # None: varna's ui.glass (the panels' glass), else 0.62
     "music_dir": "",
 }
 
