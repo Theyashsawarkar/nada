@@ -2,6 +2,12 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.1.6 -- 2026-10-24
+
+- The empty queue's hint no longer points at raga's Super+Ctrl+Shift+Y
+  (Vayu dropped that key: the YouTube tab, `3`, is the way in); it
+  suggests `:yt <search>` instead.
+
 ## v0.1.5 -- 2026-10-24
 
 - **Tabs like Vyom's**: `Ctrl+Tab` / `Ctrl+Shift+Tab` cycle them and

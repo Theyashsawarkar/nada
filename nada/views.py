@@ -180,7 +180,7 @@ class Queue(View):
             rows.append(("header", section("Autoplay is off · stops after your songs",
                                            label("M turns it on", "sect-chip off", ellipsize=False))))
         empty = label("The queue is empty.\n\n3 searches YouTube · 2 browses your library\n"
-                      "or play something from raga (Super+Ctrl+Shift+Y)", "empty", xalign=0.5, wrap=True,
+                      ":yt <search> plays the top YouTube result", "empty", xalign=0.5, wrap=True,
                       justify=Gtk.Justification.CENTER)
         self.rows.set_rows(rows, empty=empty)
 
