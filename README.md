@@ -326,7 +326,7 @@ search panel, uses exactly that.
 - **A YouTube song won't play.** Update yt-dlp first (`yt-dlp -U`, or your
   package manager): YouTube changes often and yt-dlp follows.
 - **Wrong or missing lyrics.** `:lyrics <artist> <song>` picks them by hand.
-- **Anything else.** `~/.local/state/nada/daemon.log` has the details;
+- **Anything else.** The player's log has the details: `journalctl --user -u nada -u nada-daemon -b` (without systemd: `~/.local/state/nada/daemon.log`);
   please [open an issue](https://github.com/Theyashsawarkar/nada/issues/new/choose) with it.
 
 ## Contributing

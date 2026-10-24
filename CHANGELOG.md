@@ -2,6 +2,23 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.1.3 -- 2026-10-24
+
+- **Background failures are reported again.** Every failed background job
+  (lyrics, cover art, a YouTube lookup) crashed its own error handler with
+  `NameError: cannot access free variable 'e'`: the callback ran after
+  Python had unbound the exception. So "no lyrics", the art-less
+  notification and the error toast never showed, and the real error was
+  lost.
+- **Logs go to the journal.** `nada` starts the player as your
+  `nada.service` if you have one, else as a transient unit (`systemd-run`):
+  `journalctl --user -u nada -u nada-daemon`. Only without systemd does it
+  write `~/.local/state/nada/daemon.log`, now kept under 1 MB (it grew
+  forever). An exception nobody caught, in a GTK callback or a thread, is
+  logged with its traceback; `NADA_DEBUG=1` adds debug messages.
+- Undo/redo keep the last 200 changes (they grew without limit).
+- The README, CONTRIBUTING and the bug report form point to the journal.
+
 ## v0.1.2 -- 2026-10-21
 
 - **Follows your theme**: with [varna](https://github.com/Theyashsawarkar/varna)

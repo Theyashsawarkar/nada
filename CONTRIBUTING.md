@@ -7,7 +7,7 @@ requests are all welcome.
 
 Open an [issue](https://github.com/Theyashsawarkar/nada/issues/new/choose)
 with what you did, what you expected, `nada --version`, `yt-dlp --version`,
-and anything relevant from `~/.local/state/nada/daemon.log`.
+and anything relevant from the player's log (`journalctl --user -u nada -u nada-daemon -b`).
 
 ## Development setup
 

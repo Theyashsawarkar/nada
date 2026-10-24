@@ -1,5 +1,5 @@
 """nāda (नाद, "sound"): a keyboard-driven music player for MPD, with
 YouTube, lyrics, autoplay and downloads."""
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 APP_ID = "dev.vayu.Nada"
 OBJ = "/dev/vayu/Nada"

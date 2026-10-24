@@ -139,6 +139,8 @@ class App(Gtk.Application):
 
 
 def main():
+    from . import log
+    log.setup("nada").info("nāda starting")
     app = App()
     return app.run([sys.argv[0]])
 

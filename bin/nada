@@ -23,6 +23,7 @@ directly and work even when the player isn't running.
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -52,18 +53,43 @@ def action(name, param=None):
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode
 
 
-def ensure_daemon():
-    if running():
-        return True
+def start_daemon():
+    """Starts `nada daemon` so that what it logs lands somewhere you can read:
+    your nada.service if you have one, else a transient unit (systemd-run),
+    both in the journal; else, without systemd, a log file kept under 1 MB.
+    Returns where to look."""
+    systemctl, systemd_run = shutil.which("systemctl"), shutil.which("systemd-run")
+    quiet = {"stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
+    if systemctl and subprocess.run([systemctl, "--user", "cat", "nada.service"], **quiet).returncode == 0 \
+            and subprocess.run([systemctl, "--user", "start", "--no-block", "nada.service"], **quiet).returncode == 0:
+        return "journalctl --user -u nada"
+    if systemd_run and subprocess.run([systemd_run, "--user", "--collect", "--quiet", "--unit=nada-daemon", "--",
+                                       sys.executable, os.path.realpath(__file__), "daemon"], **quiet).returncode == 0:
+        return "journalctl --user -u nada-daemon"
     os.makedirs(STATE, exist_ok=True)
-    with open(os.path.join(STATE, "daemon.log"), "a") as log:
+    path = os.path.join(STATE, "daemon.log")
+    try:
+        if os.path.getsize(path) > 1 << 20:
+            os.replace(path, path + ".1")
+    except OSError:
+        pass
+    with open(path, "a") as log:
         subprocess.Popen([sys.executable, os.path.realpath(__file__), "daemon"], stdin=subprocess.DEVNULL,
                          stdout=log, stderr=log, start_new_session=True)
+    return path
+
+
+def ensure_daemon():
+    """Starts `nada daemon` in the background if it isn't running and waits
+    (up to 10 s) for it to be ready."""
+    if running():
+        return True
+    where = start_daemon()
     for _ in range(100):
         time.sleep(0.1)
         if running():
             return True
-    print(f"nada: the player didn't start (see {STATE}/daemon.log)", file=sys.stderr)
+    print(f"nada: the player didn't start (see: {where})", file=sys.stderr)
     return False
 
 

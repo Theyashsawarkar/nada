@@ -16,6 +16,7 @@ import re
 import subprocess
 import threading
 import time
+from collections import deque
 
 from gi.repository import GLib
 
@@ -64,7 +65,9 @@ class Core:
         self.by_uri = self._load_json("queue.json", {})   # uri -> meta, survives MPD restarts
         settings = self._load_json("settings.json", {})
         self.autoplay = settings.get("autoplay", self.conf["autoplay"])
-        self.undo_stack, self.redo_stack = [], []
+        # Bounded: each entry keeps the songs it removed, and a long session
+        # of queue edits grew these forever.
+        self.undo_stack, self.redo_stack = deque(maxlen=200), deque(maxlen=200)
         self.filling = False
         self.mix_cache = {}        # seed yt id -> remaining mix entries
         self.seen_yt = set()       # yt ids already played or queued this session
@@ -102,7 +105,9 @@ class Core:
             try:
                 r = fut.result()
             except Exception as e:
-                GLib.idle_add(lambda: ((fail or self._bg_failed)(e), False)[1])
+                # e=e: Python unbinds `e` when the except block ends, and this
+                # runs later on the main loop (it was a NameError every time).
+                GLib.idle_add(lambda e=e: ((fail or self._bg_failed)(e), False)[1])
                 return
             if then:
                 GLib.idle_add(lambda: (then(r), False)[1])
