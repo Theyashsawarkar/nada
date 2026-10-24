@@ -65,6 +65,9 @@ class Core:
         self.by_uri = self._load_json("queue.json", {})   # uri -> meta, survives MPD restarts
         settings = self._load_json("settings.json", {})
         self.autoplay = settings.get("autoplay", self.conf["autoplay"])
+        # Hindi (Devanagari) lyrics in Latin letters ("latin") or as written ("native")
+        self.lyrics_script = settings.get("lyrics_script", "latin")
+        self._lyrics_retry = None
         # Bounded: each entry keeps the songs it removed, and a long session
         # of queue edits grew these forever.
         self.undo_stack, self.redo_stack = deque(maxlen=200), deque(maxlen=200)
@@ -130,7 +133,7 @@ class Core:
         os.replace(tmp, os.path.join(STATE, name))
 
     def save_settings(self):
-        self._save_json("settings.json", {"autoplay": self.autoplay})
+        self._save_json("settings.json", {"autoplay": self.autoplay, "lyrics_script": self.lyrics_script})
 
     def cmd(self, name, *args):
         """Runs an MPD command; on failure, a toast instead of an exception."""
@@ -762,16 +765,7 @@ class Core:
         self.emit("lyrics")
         song = dict(cur)
 
-        def got_lyrics(r):
-            if self.cur_id == key:
-                self.lyrics = {**r, "for": key, "loading": False}
-                self.emit("lyrics")
-
-        def no_lyrics(e):
-            if self.cur_id == key:
-                self.lyrics = {"synced": False, "lines": [], "source": "", "for": key, "loading": False, "error": str(e)}
-                self.emit("lyrics")
-        self.bg(lambda: lyrics.find(song, self.music_dir, self.c), got_lyrics, no_lyrics)
+        self._find_lyrics(song, key)
         art_song = dict(song, yt=song.get("yt") or song.get("yt_hint"))
         self.art = {"path": None, "for": key}
         self.emit("art")
@@ -793,18 +787,96 @@ class Core:
         except FileNotFoundError:
             pass
 
+    # ------------------------------------------------------------ lyrics
+    def _find_lyrics(self, song, key, prefetch=True):
+        """Looks the song's lyrics up (in the background). A source that
+        couldn't be reached isn't "no lyrics": it says so, and asks again
+        in 30 s while the song plays."""
+        if self._lyrics_retry:
+            GLib.source_remove(self._lyrics_retry)
+            self._lyrics_retry = None
+
+        def got(r):
+            if self.cur_id == key:
+                self.lyrics = {**r, "for": key, "loading": False}
+                self.emit("lyrics", "song")
+                if prefetch:
+                    self._prefetch_lyrics()
+
+        def failed(e):
+            if self.cur_id != key:
+                return
+            unreachable = isinstance(e, lyrics.Unreachable)
+            self.lyrics = {"synced": False, "lines": [], "source": "", "for": key, "loading": False,
+                           "error": "unreachable" if unreachable else str(e)}
+            self.emit("lyrics")
+            if unreachable:
+                print(f"nada: lyrics for {song.get('title')!r}: {e}; trying again in 30 s", flush=True)
+                self._lyrics_retry = GLib.timeout_add_seconds(30, lambda: (self._retry_lyrics(song, key), False)[1])
+        self.bg(lambda: lyrics.find(song, self.music_dir, self.c, self.lyrics_script), got, failed)
+
+    def _retry_lyrics(self, song, key):
+        self._lyrics_retry = None
+        if self.cur_id == key:
+            self._find_lyrics(song, key, prefetch=False)
+
+    def _prefetch_lyrics(self):
+        """The next song's lyrics, ready before it starts."""
+        p = self.cur_pos
+        nxt = self.queue[p + 1] if 0 <= p < len(self.queue) - 1 else None
+        if nxt and lyrics.cached(nxt) is None:
+            song = dict(nxt)
+            self.bg(lambda: lyrics.find(song, self.music_dir, self.c, self.lyrics_script), lambda r: None,
+                    lambda e: None)
+
+    def reload_lyrics(self):
+        cur = self.current
+        if cur:
+            self._find_lyrics(dict(cur), cur["id"], prefetch=False)
+
+    def set_lyrics_script(self, script):
+        self.lyrics_script = script
+        self.save_settings()
+        self.reload_lyrics()
+
+    def nudge_lyrics(self, delta):
+        """Moves the lyrics' timing (kept for this song); returns the new offset."""
+        cur = self.current
+        if not cur:
+            return 0.0
+        off = round((self.lyrics.get("offset") or 0.0) + delta, 2)
+        lyrics.set_offset(cur, off)
+        self.reload_lyrics()
+        return off
+
+    def lyrics_candidates(self, then):
+        cur = self.current
+        if not cur:
+            then([])
+            return
+        song = dict(cur)
+        self.bg(lambda: lyrics.candidates(song, self.music_dir, self.c), then, lambda e: then([]))
+
+    def use_lyrics(self, cand):
+        cur = self.current
+        if cur:
+            lyrics.use(cur, cand)
+            self.reload_lyrics()
+
     def search_lyrics(self, query):
+        """:lyrics <search>: the best LRCLIB match for your words, kept for this song."""
         cur = self.current
         if not cur:
             return
         key = cur["id"]
+        song = dict(cur)
 
         def work():
             text, source = lyrics.search_lrclib(query or f"{cur['artist']} {cur['title']}")
             if not text:
                 raise LookupError(f"No lyrics on LRCLIB for “{query}”")
-            lyrics.save(cur["artist"], cur["title"], text, source, manual=True)
-            return {**lyrics.parse(text), "source": source}
+            lyrics.use(song, {"text": text, "source": source})
+            return lyrics.result(lyrics.cached(song), self.lyrics_script)
 
         def then(r):
             if self.cur_id == key:
@@ -814,7 +886,6 @@ class Core:
         self.toast(f"Searching lyrics for “{query or cur['title']}”…")
         self.bg(work, then)
 
-    # ------------------------------------------------------------ downloads
     def job_for(self, yt):
         for j in reversed(self.jobs):
             if j["yt"] == yt:
@@ -882,12 +953,10 @@ class Core:
             GLib.idle_add(lambda: (self._dl_changed(), False)[1])
             self._tag(path, job)
             try:
-                r = lyrics.find({"title": job["title"], "artist": job["artist"], "album": job["album"],
-                                 "duration": job["duration"], "yt": job["yt"]})
-                lines = r["lines"]
-                if lines:
-                    text = "\n".join((f"[{int(t // 60):02d}:{t % 60:05.2f}]" if t is not None else "") + x for t, x in lines)
-                    lyrics.write_sidecar(path, text)
+                song = {"title": job["title"], "artist": job["artist"], "album": job["album"],
+                        "duration": job["duration"], "yt": job["yt"]}
+                lyrics.find(song)
+                lyrics.write_sidecar(path, (lyrics.cached(song) or {}).get("text"))
             except Exception:
                 pass
             return path

@@ -67,39 +67,66 @@ class View:
 
 # ===================================================================== home
 class Home(View):
-    name, title, glyph = "home", "Home", G["home"]
-    hints = [("space", "play"), (", .", "±10 s"), ("1", "queue"), ("L", "")][:3]
+    """Now playing: the lyrics, big, the current line lit. Above them, where
+    they came from and how they're shown; L opens the lyrics panel."""
+    name, title, glyph = "home", "Now", G["home"]
+    hints = [("space", "play"), (", .", "±10 s"), ("L", "lyrics"), ("/", "search")]
 
     def __init__(self, win):
         super().__init__(win)
         self.lyr = LyricsView(self.core.seek_to, big=True)
-        self.src = label("", "chip", ellipsize=False)
-        head = box(label(f"{G['mic']}  lyrics", "chip act", ellipsize=False), self.src, spacing=8, cls="lyrics-head")
-        foot = box(hint("1", "queue"), hint(", .", "±10 s"), label("click a line to jump there", "dim"), spacing=16,
-                   cls="lyrics-foot")
-        self.widget = box(head, self.lyr, foot, vertical=True, hexpand=True)
+        self.chips = box(spacing=8, cls="lyrics-head")
+        foot = box(hint("L", "pick lyrics, script, timing"), hint(", .", "±10 s"), label("click a line to jump there", "dim"),
+                   spacing=16, cls="lyrics-foot")
+        self.widget = box(self.chips, self.lyr, foot, vertical=True, hexpand=True)
+
+    def _chips(self, L):
+        child = self.chips.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.chips.remove(child)
+            child = nxt
+        c = self.core
+        if L.get("loading"):
+            self.chips.append(label("looking for lyrics…", "chip", ellipsize=False))
+        elif L.get("error"):
+            self.chips.append(label("● can't reach the lyrics sources", "chip warn", ellipsize=False))
+        elif L.get("lines"):
+            kind = "synced" if L.get("synced") else "plain"
+            self.chips.append(label(f"● {kind} · {L.get('source') or '?'}", "chip ok" if L.get("synced") else "chip",
+                                    ellipsize=False))
+            if L.get("devanagari"):
+                self.chips.append(label("Hinglish" if c.lyrics_script == "latin" else "हिन्दी", "chip", ellipsize=False))
+            if L.get("offset"):
+                self.chips.append(label(f"timing {L['offset']:+.2f} s", "chip", ellipsize=False))
+            if L.get("manual"):
+                self.chips.append(label("your pick", "chip act", ellipsize=False))
+        self.chips.append(Gtk.Box(hexpand=True))
+        self.chips.append(label("L  lyrics", "chip act", ellipsize=False))
 
     def refresh(self, event=None):
         if event in (None, "lyrics", "song", "connection"):
-            L = self.core.lyrics
-            cur = self.core.current
-            if not self.core.connected:
-                self.lyr.set(None, message=f"{self.core.error or 'Connecting to MPD…'}\n\nStart it: systemctl --user start mpd")
+            c = self.core
+            L = c.lyrics
+            cur = c.current
+            if not c.connected:
+                self.lyr.set(None, message=f"{c.error or 'Connecting to MPD…'}\n\nStart it: systemctl --user start mpd")
             elif not cur:
-                self.lyr.set(None, message="Nothing playing.\n\n3 to search YouTube · 2 for your library")
+                self.lyr.set(None, message="Nothing playing.\n\n/ searches your library and YouTube")
+            elif L.get("loading"):
+                self.lyr.set(None, message="Looking for the lyrics…\nYouTube Music, LRCLIB, NetEase")
+            elif L.get("error") == "unreachable":
+                self.lyr.set(None, message="Couldn't reach the lyrics sources (no network, or they're busy).\n"
+                                           "Trying again in 30 s · L to look by hand")
+            elif not L.get("lines"):
+                self.lyr.set(None, message="No lyrics for this song on YouTube Music, LRCLIB or NetEase.\n"
+                                           "L to look by hand · :lyrics <words> to search with your own")
             else:
-                self.lyr.set(L, key=L.get("for"))
-            self.src.set_text("synced · " + L["source"] if L.get("synced") else (L.get("source") or "—"))
-            self.src.set_visible(bool(L.get("source")))
+                self.lyr.set(L, key=f"{L.get('for')}|{c.lyrics_script}|{L.get('offset')}|{L.get('source')}")
+            self._chips(L)
 
     def tick(self, t):
         self.lyr.update(t)
-
-    def key(self, k, n, mods):
-        if k == "L":
-            self.win.toast("Home always shows the lyrics · 1 for the queue")
-            return True
-        return False
 
 
 # ===================================================================== queue
@@ -792,9 +819,12 @@ class NowPane(Gtk.Box):
                 pic = label(G["note"], "cover cover-glyph", xalign=0.5, ellipsize=False)
                 pic.set_size_request(self.cover_size, self.cover_size)
             self.cover_box.append(pic)
-        if event in (None, "song", "queue", "player", "options", "downloads", "connection"):
-            self.title.set_text(s["title"] if s else ("Nothing playing" if c.connected else c.error or "Connecting…"))
-            self.artist.set_text((s.get("artist") or s.get("channel") or "") if s else "")
+        if event in (None, "song", "queue", "player", "options", "downloads", "connection", "lyrics"):
+            m = c.lyrics.get("meta") if s and c.lyrics.get("for") == s["id"] else None
+            self.title.set_text((m or {}).get("title") or s["title"] if s else
+                                ("Nothing playing" if c.connected else c.error or "Connecting…"))
+            self.artist.set_text(", ".join((m or {}).get("artists") or []) or (s.get("artist") or s.get("channel") or "")
+                                 if s else "")
             self._details(s)
             self._chips(s)
             self._upnext()
@@ -815,8 +845,13 @@ class NowPane(Gtk.Box):
             rows.append(("Singers", s["singers"]))
         if s.get("cast"):
             rows.append(("Starring", s["cast"]))
-        if s.get("movie") or s.get("album"):
+        m = self.core.lyrics.get("meta") if self.core.lyrics.get("for") == s["id"] else None
+        if m and m.get("album"):
+            rows.append(("Album", m["album"] + (f" · {m['year']}" if m.get("year") else "")))
+        elif s.get("movie") or s.get("album"):
             rows.append(("Film" if s.get("movie") else "Album", s.get("movie") or s["album"]))
+        if m and s.get("title") != m.get("title"):
+            rows.append(("Uploaded as", s["title"]))
         if s.get("channel") and s["channel"] != s.get("artist"):
             rows.append(("Channel", s["channel"]))
         if s.get("views"):

@@ -2,6 +2,37 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## v0.2.0 -- 2026-10-24
+
+- **Search from anywhere** (`/`): a floating panel over whatever you're on.
+  Your library answers as you type, YouTube a moment later, the best match
+  on top; `Tab` picks where to look (YouTube, library, playlists, commands,
+  this list), `yt `, `lib `, `pl ` and `:` narrow it as you type. `Enter`
+  plays, `Ctrl+Enter` plays next, `Shift+Enter` adds, `Ctrl+d` downloads,
+  without leaving the box. Recent searches when it's empty. The YouTube
+  tab is gone (its full results open from the panel); tabs are now Now ·
+  Queue · Library · Playlists · Downloads (`0`–`4`).
+- **Lyrics that show up.** They were found for few songs: nāda asked one
+  source, LRCLIB, and a failed request (a timeout, a 503) was remembered
+  as "no lyrics" for a day. Now: YouTube Music first, by the video itself
+  (synced lyrics licensed from LyricFind, and the song's real name and
+  artists), then LRCLIB and NetEase with those names. A source that can't
+  be reached is asked again in 30 s and never cached; a real miss is kept
+  6 hours. The next song's lyrics load while this one plays. Needs
+  python-ytmusicapi (without it: LRCLIB and NetEase).
+- **Hindi in Latin letters or Devanagari**: written as Hinglish ("Kadam
+  badha le") by default when a source has them in Devanagari; `s` in the
+  lyrics panel switches.
+- **The lyrics panel** (`L` on Now): every version the sources have, with
+  whether it's synced and fits the song's length; `Enter` uses one (kept),
+  `[` `]` move the timing by a quarter second (kept per song).
+- **Now** shows where the lyrics came from and plain words when there are
+  none ("can't reach the sources · trying again in 30 s"), never a blank;
+  the right side shows the song's real name, artists and album.
+- **One-row player bar** under a thin timeline (thicker, with a knob, on
+  hover): what's playing on the left, the controls in the middle, time and
+  volume on the right.
+
 ## v0.1.6 -- 2026-10-24
 
 - The empty queue's hint no longer points at raga's Super+Ctrl+Shift+Y

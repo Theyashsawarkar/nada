@@ -1,23 +1,25 @@
 """The player window: tabs, the right pane, controls, the vim mode line,
 and the vim key engine (modes, counts, pending operators, registers)."""
 import re
-import time
 
 from gi.repository import Gdk, GLib, Gtk
 
-from . import art, youtube
+from . import art, lyrics, youtube
 from .core import fmt_time
+from .config import STATE
+from .finder import Finder
+from .search import SearchPanel
 from .views import Downloads, Home, Library, NowPane, Playlists, Queue, YouTube
-from .widgets import G, box, hint, keycap, label
+from .widgets import G, box, hint, keycap, label, picture, tile
 
 # keybind: Nada/everywhere | Ctrl+Tab / Ctrl+Shift+Tab | Switch to the next / previous tab (wraps around)
-# keybind: Nada/everywhere | Ctrl+0..5 | Switch to that numbered tab at once (the number shown on it)
-# keybind: Nada/everywhere | 0 | Switch to Home (the lyrics)
+# keybind: Nada/everywhere | / | Open the search panel (your library, YouTube, playlists, : commands, this list)
+# keybind: Nada/everywhere | Ctrl+0..4 | Switch to that numbered tab at once (the number shown on it)
+# keybind: Nada/everywhere | 0 | Switch to Now (the lyrics)
 # keybind: Nada/everywhere | 1 | Switch to the queue
 # keybind: Nada/everywhere | 2 | Switch to the library
-# keybind: Nada/everywhere | 3 | Switch to YouTube search
-# keybind: Nada/everywhere | 4 | Switch to playlists
-# keybind: Nada/everywhere | 5 | Switch to downloads
+# keybind: Nada/everywhere | 3 | Switch to playlists
+# keybind: Nada/everywhere | 4 | Switch to downloads
 # keybind: Nada/everywhere | j / k | Move down / up a song (counts work: 5j)
 # keybind: Nada/everywhere | gg / G | Jump to the top / bottom (12G: to the 12th)
 # keybind: Nada/everywhere | Ctrl+d / Ctrl+u | Scroll half a page down / up
@@ -33,8 +35,7 @@ from .widgets import G, box, hint, keycap, label
 # keybind: Nada/everywhere | V | Select several songs (visual mode)
 # keybind: Nada/everywhere | u | Restore the last change (undo)
 # keybind: Nada/everywhere | Ctrl+r | Restore an undone change (redo)
-# keybind: Nada/everywhere | / | Search (the list; YouTube on 3; your library on 2)
-# keybind: Nada/everywhere | n / N | Jump to the next / previous search match
+# keybind: Nada/everywhere | n / N | Jump to the next / previous match (after a "This list" search)
 # keybind: Nada/everywhere | : | Run a command (:w name, :sleep 30m, :yt query…)
 # keybind: Nada/everywhere | ? | Show all keys
 # keybind: Nada/everywhere | z | Switch to the mini player
@@ -54,19 +55,35 @@ from .widgets import G, box, hint, keycap, label
 # keybind: Nada/youtube | D | Save the result to your music folder (download)
 # keybind: Nada/downloads | R | Restart a failed download
 # keybind: Nada/downloads | dd | Delete the saved file (asks first)
+# keybind: Nada/now | L | Open the lyrics panel (pick a version, the script, the timing)
+# keybind: Nada/lyrics panel | j / k | Move through the versions the sources have
+# keybind: Nada/lyrics panel | Enter | Use these lyrics (kept for the song)
+# keybind: Nada/lyrics panel | s | Switch the script: Hinglish (Latin letters) or Devanagari
+# keybind: Nada/lyrics panel | [ / ] | Show the lyrics earlier / later by 0.25 s (kept for the song)
+# keybind: Nada/lyrics panel | Esc | Close the lyrics panel
+# keybind: Nada/search | Tab / Shift+Tab | Switch where to look (all, YouTube, library, playlists, commands, this list)
+# keybind: Nada/search | Ctrl+j / Ctrl+k | Move through the results while typing
+# keybind: Nada/search | Enter | Play the result (a playlist: replace the queue; a command: run it)
+# keybind: Nada/search | Ctrl+Enter | Play the result next
+# keybind: Nada/search | Shift+Enter | Add the result to the end of the queue
+# keybind: Nada/search | Ctrl+d | Download the result (YouTube)
+# keybind: Nada/search | Ctrl+u | Clear the search box
+# keybind: Nada/search | Ctrl+x | Clear recent searches
+# keybind: Nada/search | Esc | Close the search panel
 
-TABS = ["home", "queue", "library", "youtube", "playlists", "downloads"]
+TABS = ["home", "queue", "library", "playlists", "downloads"]   # YouTube's results: a page, from the search panel
 KEYNAMES = {"space": " ", "period": ".", "comma": ",", "greater": ">", "less": "<", "equal": "=", "plus": "+",
             "minus": "-", "slash": "/", "colon": ":", "question": "?", "KP_Enter": "Return", "Up": "k", "Down": "j",
             "KP_Add": "+", "KP_Subtract": "-", "BackSpace": "BackSpace", "bracketleft": "[", "bracketright": "]"}
 HELP = [
-    ("Move", [("j k", "down / up (5j counts)"), ("gg G", "top / bottom"), ("Ctrl+d Ctrl+u", "half a page"),
-              ("h l", "columns (library)"), ("zz", "the playing song"), ("0", "home: lyrics"), ("1–5", "queue, library, YouTube…")]),
+    ("Find & move", [("/", "search: library, YouTube"), ("j k", "down / up (5j)"), ("gg G", "top / bottom"),
+                     ("h l", "columns (library)"), ("zz", "the playing song"), ("0–4", "now, queue, library…"),
+                     ("Esc", "back / close")]),
     ("Play", [("Enter", "play the selected song"), ("space", "play / pause"), (". ,", "forward / back 10 s"),
               ("> <", "next / previous song"), ("= - m", "volume, mute"), ("s r", "shuffle, repeat"), ("M", "autoplay on/off")]),
     ("Queue", [("dd", "remove"), ("J K", "move down / up"), ("yy p P", "copy, paste below / above"), ("A", "play next"),
                ("V", "select several"), ("u Ctrl+r", "undo, redo"), ("D", "download (YouTube)")]),
-    ("More", [("L", "lyrics (queue)"), ("/ n N", "search, next, previous"), (":", "commands"), ("i", "song info"),
+    ("More", [("L", "lyrics panel (Now)"), ("n N", "next match"), (":", "commands"), ("i", "song info"),
               ("z", "mini player"), ("q Esc", "close (keeps playing)"), (":w :e", "save / load a playlist")]),
 ]
 COMMANDS = ":w <name> save the queue · :e <name> load a playlist · :yt <search> · :play <search> · :sleep 30m · :vol 40 · " \
@@ -102,9 +119,11 @@ class Window(Gtk.ApplicationWindow):
         top.append(box(label(G["note"], "glyph", ellipsize=False), label("nāda", ellipsize=False), spacing=7, cls="logo",
                        margin_end=8))
         self.views = {}
-        for i, cls in enumerate([Home, Queue, Library, YouTube, Playlists, Downloads]):
+        for i, cls in enumerate([Home, Queue, Library, Playlists, Downloads, YouTube]):
             v = cls(self)
             self.views[v.name] = v
+            if v.name not in TABS:
+                continue
             b = Gtk.Button()
             b.add_css_class("tab")
             b.set_child(box(keycap(str(i)), label(v.title, ellipsize=False), spacing=7))
@@ -148,6 +167,21 @@ class Window(Gtk.ApplicationWindow):
         self.help = self._help()
         self.help.set_visible(False)
         overlay.add_overlay(self.help)
+        # the lyrics panel (L on Now): pick a version, the script, the timing
+        self.lpanel = self._lyrics_panel()
+        self.lpanel.set_visible(False)
+        overlay.add_overlay(self.lpanel)
+        # the search panel (/), over a dimmed window
+        self.finder = Finder(self)
+        self.scrim = Gtk.Box(hexpand=True, vexpand=True, visible=False, css_classes=["scrim"])
+        g = Gtk.GestureClick()
+        g.connect("pressed", lambda *_: self.close_search())
+        self.scrim.add_controller(g)
+        overlay.add_overlay(self.scrim)
+        self.search = SearchPanel(self, self.finder, STATE, "Search songs, artists, YouTube… or :command")
+        self.search.set_margin_top(64)
+        self.search.set_visible(False)
+        overlay.add_overlay(self.search)
 
         keys = Gtk.EventControllerKey()
         keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
@@ -161,6 +195,7 @@ class Window(Gtk.ApplicationWindow):
             v.refresh(None)
         self.now.refresh(None)
         self._update_controls()
+        self._bar_now()
         self.switch("home")
         GLib.timeout_add(200, self._tick)
 
@@ -176,36 +211,204 @@ class Window(Gtk.ApplicationWindow):
         return b
 
     def _controls(self):
+        """One row under a thin timeline: what's playing on the left, the
+        controls in the middle, time and volume on the right."""
         c = self.core
         step = lambda: c.conf["seek_step"]
         self.pp = self._btn(G["play"], "Play / pause  (space)", c.toggle, big=True)
-        ctl = box(self._btn(G["prev"], "Previous song  (<)", c.prev),
-                  self._btn(G["back"], "Back 10 seconds  (,)", lambda: c.seek(-step())),
-                  self.pp,
-                  self._btn(G["fwd"], "Forward 10 seconds  (.)", lambda: c.seek(step())),
-                  self._btn(G["next"], "Next song  (>)", c.next), spacing=2)
-        self.tcur = label("0:00", "time", ellipsize=False)
-        self.tlen = label("0:00", "time", ellipsize=False)
-        self.progress = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1)
-        self.progress.set_draw_value(False)
-        self.progress.set_hexpand(True)
-        self.progress.add_css_class("progress")
-        self.progress.set_focusable(False)
-        self.progress.connect("change-value", self._seek_drag)
         self.shuf = self._btn(G["shuffle"], "Shuffle  (s)", c.toggle_random)
         self.rep = self._btn(G["repeat"], "Repeat: off, all, this song  (r)", c.cycle_repeat)
+        ctl = box(self.shuf, self._btn(G["prev"], "Previous song  (<)", c.prev),
+                  self._btn(G["back"], "Back 10 seconds  (,)", lambda: c.seek(-step())), self.pp,
+                  self._btn(G["fwd"], "Forward 10 seconds  (.)", lambda: c.seek(step())),
+                  self._btn(G["next"], "Next song  (>)", c.next), self.rep, spacing=4, halign=Gtk.Align.CENTER)
+        self.bar_art = box(valign=Gtk.Align.CENTER)
+        self.bar_title = label("", "bar-title")
+        self.bar_sub = label("", "bar-sub")
+        left = box(self.bar_art, box(self.bar_title, self.bar_sub, vertical=True, valign=Gtk.Align.CENTER, hexpand=True),
+                   spacing=10)
+        left.set_size_request(300, -1)
+        self.tcur = label("0:00", "time", ellipsize=False)
+        self.tlen = label("0:00", "time", ellipsize=False)
         self.volglyph = self._btn(G["vol"], "Mute  (m)", c.mute)
         self.vol = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         self.vol.set_draw_value(False)
-        self.vol.set_size_request(80, -1)
+        self.vol.set_size_request(86, -1)
         self.vol.add_css_class("volume")
         self.vol.set_focusable(False)
         self.vol.connect("change-value", lambda _s, _t, v: (c.set_volume(v), False)[1])
         self.volv = label("", "time", ellipsize=False)
         self.volv.set_size_request(26, -1)
-        side = box(self.shuf, self.rep, self.volglyph, self.vol, self.volv, spacing=4)
-        return box(ctl, box(self.tcur, self.progress, self.tlen, spacing=10, hexpand=True, margin_start=10, margin_end=10),
-                   side, cls="bar", spacing=8)
+        right = box(self.tcur, label("/", "time", ellipsize=False), self.tlen, label("", margin_start=8), self.volglyph,
+                    self.vol, self.volv, spacing=4, halign=Gtk.Align.END)
+        right.set_size_request(300, -1)
+        row = Gtk.CenterBox(start_widget=left, center_widget=ctl, end_widget=right)
+        row.add_css_class("bar-row")
+        self.progress = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 1, 1)
+        self.progress.set_draw_value(False)
+        self.progress.set_hexpand(True)
+        self.progress.add_css_class("progress")
+        self.progress.add_css_class("slim")
+        self.progress.set_focusable(False)
+        self.progress.connect("change-value", self._seek_drag)
+        return box(self.progress, row, vertical=True, cls="bar")
+
+    def _bar_now(self):
+        """The bar's left side: the cover, the song's real name and artists."""
+        c = self.core
+        s = c.current
+        child = self.bar_art.get_first_child()
+        if child:
+            self.bar_art.remove(child)
+        if not s:
+            self.bar_title.set_text("Nothing playing")
+            self.bar_sub.set_text("/ to search")
+            self.bar_art.append(label(G["note"], "glyph bar-glyph", xalign=0.5, ellipsize=False))
+            return
+        m = c.lyrics.get("meta") if c.lyrics.get("for") == s["id"] else None
+        self.bar_title.set_text((m or {}).get("title") or s["title"])
+        self.bar_sub.set_text(", ".join((m or {}).get("artists") or []) or s.get("artist") or s.get("channel") or "")
+        path = c.art.get("path") if c.art.get("for") == s["id"] else None
+        self.bar_art.append((picture(path, 42, "tile") if path else None) or tile(s.get("yt") or s.get("file"), s["title"], 42))
+
+    # ------------------------------------------------------------ search panel (/)
+    def open_search(self, text="", scope=0):
+        if self.lpanel.get_visible():
+            self._lp_close()
+        self.scrim.set_visible(True)
+        self.search.open(text, scope)
+        self.set_mode("SEARCH")
+
+    def close_search(self):
+        self.search.close()
+        self.scrim.set_visible(False)
+        self.root.grab_focus()
+        self.set_mode("NORMAL")
+
+    # ------------------------------------------------------------ lyrics panel (L)
+    def _lyrics_panel(self):
+        self.lp_title = label("Lyrics", "menu-title")
+        self.lp_chips = box(spacing=6, cls="lp-chips")
+        self.lp_note = label("", "dim menu-note", wrap=True, max_width_chars=48)
+        self.lp_list = box(vertical=True, spacing=4)
+        sc = Gtk.ScrolledWindow(vexpand=True, propagate_natural_height=True, max_content_height=440)
+        sc.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        sc.add_css_class("noscrollbar")
+        sc.set_child(self.lp_list)
+        self.lp_scroll = sc
+        foot = box(hint("j k", "move"), hint("Enter", "use"), hint("s", "script"), hint("[ ]", "timing"),
+                   hint("Esc", "close"), spacing=12, cls="menu-foot")
+        self.lp_items, self.lp_sel = [], 0
+        return box(self.lp_title, self.lp_chips, self.lp_note, sc, foot, vertical=True, spacing=6, cls="menu lpanel",
+                   halign=Gtk.Align.END, valign=Gtk.Align.START, margin_top=70, margin_end=24, margin_bottom=110)
+
+    def open_lyrics_panel(self):
+        c = self.core
+        if not c.current:
+            self.toast("Nothing playing")
+            return
+        self.lpanel.set_visible(True)
+        self.set_mode("LYRICS")
+        m = c.lyrics.get("meta") or {}
+        self.lp_title.set_text(f"Lyrics for {m.get('title') or c.current['title']}")
+        self._lp_chips()
+        self.lp_items, self.lp_sel = [], 0
+        self._lp_list()
+        self.lp_note.set_text("Asking YouTube Music, LRCLIB and NetEase…")
+        self.lp_note.set_visible(True)
+
+        def got(cands):
+            if self.lpanel.get_visible():
+                self.lp_items = cands
+                self.lp_sel = 0
+                self.lp_note.set_text("" if cands else "No source has lyrics for this song. :lyrics <words> searches LRCLIB "
+                                                         "with your own words.")
+                self.lp_note.set_visible(not cands)
+                self._lp_list()
+        c.lyrics_candidates(got)
+
+    def _lp_chips(self):
+        c = self.core
+        child = self.lp_chips.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.lp_chips.remove(child)
+            child = nxt
+        latin = c.lyrics_script == "latin"
+        self.lp_chips.append(label("Hinglish", "chip act" if latin else "chip", ellipsize=False))
+        self.lp_chips.append(label("हिन्दी", "chip" if latin else "chip act", ellipsize=False))
+        self.lp_chips.append(Gtk.Box(hexpand=True))
+        off = c.lyrics.get("offset") or 0.0
+        self.lp_chips.append(label(f"timing {off:+.2f} s", "chip act" if off else "chip", ellipsize=False))
+
+    def _lp_list(self):
+        child = self.lp_list.get_first_child()
+        while child:
+            nxt = child.get_next_sibling()
+            self.lp_list.remove(child)
+            child = nxt
+        self.lp_rows = []
+        for i, cand in enumerate(self.lp_items):
+            head = box(label(cand["source"], "cand-source", hexpand=True), spacing=6)
+            if cand.get("in_use"):
+                head.append(label("in use", "chip ok", ellipsize=False))
+            head.append(label("synced" if cand["synced"] else "plain", "chip ok" if cand["synced"] else "chip",
+                              ellipsize=False))
+            diff = cand.get("diff") or 0
+            fit = ("same length" if diff <= 8 else f"{int(diff // 60)}:{int(diff % 60):02d} {'longer' if (cand.get('duration') or 0) > (self.core.duration() or 0) else 'shorter'}") \
+                if cand.get("duration") else ""
+            who = " · ".join(x for x in (cand.get("title"), cand.get("artist"), fit) if x)
+            first = lyrics.in_script("\n".join(cand.get("first") or []), self.core.lyrics_script)
+            w = box(head, label(who, "cand-fit" + (" off" if diff > 8 else "")), label(first, "cand-first", wrap=True,
+                                                                                        max_width_chars=50),
+                    vertical=True, spacing=3, cls="cand")
+            g = Gtk.GestureClick()
+            g.connect("pressed", lambda _g, n, *_a, i=i: (setattr(self, "lp_sel", i), self._lp_paint(),
+                                                          n == 2 and self._lp_use()))
+            w.add_controller(g)
+            self.lp_rows.append(w)
+            self.lp_list.append(w)
+        self._lp_paint()
+
+    def _lp_paint(self):
+        for i, w in enumerate(getattr(self, "lp_rows", [])):
+            (w.add_css_class if i == self.lp_sel else w.remove_css_class)("sel")
+
+    def _lp_use(self):
+        if 0 <= self.lp_sel < len(self.lp_items):
+            cand = self.lp_items[self.lp_sel]
+            self.core.use_lyrics(cand)
+            for c2 in self.lp_items:
+                c2["in_use"] = c2 is cand
+            self._lp_list()
+            self.toast(f"Using {cand['source']}'s lyrics · kept for this song")
+
+    def _lp_close(self):
+        self.lpanel.set_visible(False)
+        self.root.grab_focus()
+        self.set_mode("NORMAL")
+
+    def _lp_key(self, name):
+        c = self.core
+        if name in ("Escape", "L", "q"):
+            self._lp_close()
+        elif name in ("j", "Down") and self.lp_items:
+            self.lp_sel = min(len(self.lp_items) - 1, self.lp_sel + 1)
+            self._lp_paint()
+        elif name in ("k", "Up") and self.lp_items:
+            self.lp_sel = max(0, self.lp_sel - 1)
+            self._lp_paint()
+        elif name in ("Return", "KP_Enter", "l"):
+            self._lp_use()
+        elif name == "s":
+            c.set_lyrics_script("native" if c.lyrics_script == "latin" else "latin")
+            self.toast("Lyrics in Latin letters (Hinglish)" if c.lyrics_script == "latin" else "Lyrics as written (Devanagari)")
+            GLib.timeout_add(400, lambda: (self._lp_chips(), False)[1])
+        elif name in ("bracketleft", "bracketright"):
+            off = c.nudge_lyrics(-0.25 if name == "bracketleft" else 0.25)
+            self.toast(f"Lyrics {'earlier' if name == 'bracketleft' else 'later'}: {off:+.2f} s · kept for this song")
+            GLib.timeout_add(300, lambda: (self._lp_chips(), False)[1])
+        return True
 
     def _help(self):
         grid = Gtk.Grid(column_spacing=34, row_spacing=4, column_homogeneous=True)
@@ -254,7 +457,7 @@ class Window(Gtk.ApplicationWindow):
     def set_mode(self, mode):
         self.mode = mode
         self.modelab.set_text(mode)
-        for m in ("visual", "search", "command", "confirm"):
+        for m in ("visual", "search", "command", "confirm", "lyrics"):
             (self.modelab.add_css_class if mode.lower() == m else self.modelab.remove_css_class)(m)
 
     def _hints(self):
@@ -297,6 +500,8 @@ class Window(Gtk.ApplicationWindow):
         self.now.refresh(e)
         if e in ("player", "mixer", "options", "song", "queue", "connection"):
             self._update_controls()
+        if e in ("song", "art", "lyrics", "connection"):
+            self._bar_now()
 
     def _update_controls(self):
         c = self.core
@@ -387,9 +592,13 @@ class Window(Gtk.ApplicationWindow):
             i = TABS.index(self.tab) if self.tab in TABS else 0
             self.switch(TABS[(i + (-1 if back else 1)) % len(TABS)])
             return True
-        if ctrl_on and re.fullmatch(r"[0-5]", name):
+        if ctrl_on and re.fullmatch(r"[0-4]", name):
             self.switch(TABS[int(name)])
             return True
+        if self.search.get_visible():
+            return self.search.key(name, state)
+        if self.lpanel.get_visible():
+            return self._lp_key(name)
         focus = self.get_focus()
         yt_entry = self.views["youtube"].entry
         # typing into the command line or the YouTube search box
@@ -438,7 +647,7 @@ class Window(Gtk.ApplicationWindow):
             self._show_pending()
             if self.digit_timer:
                 GLib.source_remove(self.digit_timer)
-            if re.fullmatch(r"[1-5]", self.count):
+            if re.fullmatch(r"[1-4]", self.count):
                 c = self.count
                 self.digit_timer = GLib.timeout_add(650, self._digit_tab, c)
             return True
@@ -557,7 +766,10 @@ class Window(Gtk.ApplicationWindow):
         elif k == "M":
             c.set_autoplay(not c.autoplay)
         elif k == "L":
-            self.toggle_lyrics()
+            if self.tab == "home":
+                self.open_lyrics_panel()
+            else:
+                self.toggle_lyrics()
         elif k == "u":
             c.undo()
         elif k == "C-r":
@@ -571,10 +783,7 @@ class Window(Gtk.ApplicationWindow):
             if cur:
                 self.toast(f"{cur['title']} · {cur.get('artist', '')} · " + (youtube.watch_url(cur['yt']) if cur.get('yt') else cur['file']))
         elif k == "/":
-            if self.tab == "youtube":
-                self.views["youtube"].focus_entry()
-            else:
-                self._cmd_open("/")
+            self.open_search()
         elif k == ":":
             self._cmd_open(":")
         elif k == "?":

@@ -14,7 +14,13 @@ it must work on any desktop with MPD, without Vayu.
   client. `nada/youtube.py`, `nada/lyrics.py`, `nada/art.py`: blocking
   helpers, only ever called from worker threads (`core.bg`). `nada/window.py`:
   the window and the vim key engine; `nada/views.py`: the tabs and the right
-  pane; `nada/mini.py`, `nada/mpris.py`.
+  pane; `nada/mini.py`, `nada/mpris.py`. `nada/search.py` is the search
+  panel (/), the same module as drishya's (keep the two in step);
+  `nada/finder.py` is what it finds here. `nada/translit.py` writes Hindi
+  in Latin letters.
+- Lyrics (`nada/lyrics.py`): YouTube Music (by video id), then LRCLIB and
+  NetEase. A request that fails raises `Unreachable` and is never cached
+  as "no lyrics"; tests/test_lyrics.py replaces every source.
 - Never block the GTK main loop: anything that touches the network or
   yt-dlp goes through `core.bg(work, then)`; only `then` touches widgets.
   Quick MPD commands are fine on the main loop.
