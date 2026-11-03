@@ -6,3 +6,6 @@ tagline = "A keyboard-driven music player for your files and YouTube, with synce
 color = "pink"
 kind = "music player"
 logo = "assets/logo.svg"
+shloka = "चैतन्यं सर्वभूतानां विवृत्तं जगदात्मना ।\nनादब्रह्म तदानन्दमद्वितीयमुपास्महे ॥"
+shloka_meaning = "The awareness in all beings, unfolded as the world: we honour it as Brahman in sound, joy without a second."
+shloka_source = "Saṅgīta Ratnākara 1.3.1"

@@ -6,6 +6,15 @@
   </picture>
 </p>
 
+<!-- identity -->
+<p align="center">
+  <b>चैतन्यं सर्वभूतानां विवृत्तं जगदात्मना ।<br>
+  नादब्रह्म तदानन्दमद्वितीयमुपास्महे ॥</b><br>
+  <i>The awareness in all beings, unfolded as the world: we honour it as Brahman in sound, joy without a second.</i><br>
+  <sub>Saṅgīta Ratnākara 1.3.1</sub>
+</p>
+<!-- /identity -->
+
 <p align="center">
   <b>A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.</b><br>
   Vim keys for everything. Built on MPD, styled like glass, opens on one key.
