@@ -193,8 +193,8 @@ text.search-entry, .search-entry { font-size: 17px; color: @text; caret-color: @
 .bar { padding: 0 0 8px; }
 .bar-row { padding: 6px 18px 0; }
 scale.progress.slim { padding: 0; margin: 0 -1px; min-height: 9px; }
-scale.progress.slim trough { min-height: 3px; border-radius: 0; background: alpha(white, 0.08); }
-scale.progress.slim highlight { min-height: 3px; border-radius: 0 3px 3px 0; background-image: linear-gradient(to right, @mauve, @pink); }
+scale.progress.slim trough { min-height: 3px; border-radius: 3px; background: alpha(white, 0.08); }
+scale.progress.slim highlight { min-height: 3px; border-radius: 3px; background-image: linear-gradient(to right, @mauve, @pink); }
 scale.progress.slim slider { min-width: 0; min-height: 0; margin: 0; background: transparent; box-shadow: none; border: none; }
 scale.progress.slim:hover trough, scale.progress.slim:hover highlight { min-height: 5px; }
 scale.progress.slim:hover slider { min-width: 12px; min-height: 12px; margin: -5px; border-radius: 99px; background: @text; }

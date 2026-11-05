@@ -4,6 +4,7 @@ Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
 ## Unreleased
 
+- Every corner is rounded: the slim progress bar and the website's callouts.
 - A logo and a shloka at the top of the README and the website: every Vayu tool has them now.
 
 ## v0.2.1 -- 2026-10-24
