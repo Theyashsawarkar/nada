@@ -68,15 +68,15 @@ class View:
 # ===================================================================== home
 class Home(View):
     """Now playing: the lyrics, big, the current line lit. Above them, where
-    they came from and how they're shown; L opens the lyrics panel."""
+    they came from and how they're shown; Space l l opens the lyrics panel."""
     name, title, glyph = "home", "Now", G["home"]
-    hints = [("space", "play"), (", .", "±10 s"), ("L", "lyrics"), ("/", "search")]
+    hints = [("p", "play"), (", .", "±10 s"), ("Space l l", "lyrics panel"), ("/", "search"), ("Space", "more")]
 
     def __init__(self, win):
         super().__init__(win)
         self.lyr = LyricsView(self.core.seek_to, big=True)
         self.chips = box(spacing=8, cls="lyrics-head")
-        foot = box(hint("L", "pick lyrics, script, timing"), hint(", .", "±10 s"), label("click a line to jump there", "dim"),
+        foot = box(hint("Space l l", "pick lyrics, script, timing"), hint(", .", "±10 s"), label("click a line to jump there", "dim"),
                    spacing=16, cls="lyrics-foot")
         self.widget = box(self.chips, self.lyr, foot, vertical=True, hexpand=True)
 
@@ -102,7 +102,7 @@ class Home(View):
             if L.get("manual"):
                 self.chips.append(label("your pick", "chip act", ellipsize=False))
         self.chips.append(Gtk.Box(hexpand=True))
-        self.chips.append(label("L  lyrics", "chip act", ellipsize=False))
+        self.chips.append(label("Space l l  lyrics", "chip act", ellipsize=False))
 
     def refresh(self, event=None):
         if event in (None, "lyrics", "song", "connection"):
@@ -120,7 +120,7 @@ class Home(View):
                                            "Trying again in 30 s · L to look by hand")
             elif not L.get("lines"):
                 self.lyr.set(None, message="No lyrics for this song on YouTube Music, LRCLIB or NetEase.\n"
-                                           "L to look by hand · :lyrics <words> to search with your own")
+                                           "Space l l to look by hand · :lyrics <words> to search with your own")
             else:
                 self.lyr.set(L, key=f"{L.get('for')}|{c.lyrics_script}|{L.get('offset')}|{L.get('source')}")
             self._chips(L)
@@ -132,7 +132,7 @@ class Home(View):
 # ===================================================================== queue
 class Queue(View):
     name, title, glyph = "queue", "Queue", G["queue"]
-    hints = [("Enter", "play"), ("dd", "remove"), ("J K", "move"), ("L", "lyrics"), ("D", "download")]
+    hints = [("Enter", "play"), ("dd", "remove"), ("J K", "move"), ("gp", "paste"), ("Space u l", "lyrics"), ("Space", "more")]
 
     def __init__(self, win):
         super().__init__(win)
@@ -206,7 +206,7 @@ class Queue(View):
         if q and not c.autoplay:
             rows.append(("header", section("Autoplay is off · stops after your songs",
                                            label("M turns it on", "sect-chip off", ellipsize=False))))
-        empty = label("The queue is empty.\n\n3 searches YouTube · 2 browses your library\n"
+        empty = label("The queue is empty.\n\nSpace f y searches YouTube · Space t l browses your library\n"
                       ":yt <search> plays the top YouTube result", "empty", xalign=0.5, wrap=True,
                       justify=Gtk.Justification.CENTER)
         self.rows.set_rows(rows, empty=empty)
@@ -311,7 +311,7 @@ class Queue(View):
 # ===================================================================== library
 class Library(View):
     name, title, glyph = "library", "Library", G["lib"]
-    hints = [("h l", "columns"), ("Enter", "play"), ("a", "add"), ("Tab", "artists/albums/genres/folders"), ("/", "search")]
+    hints = [("h l", "columns"), ("Enter", "play"), ("a", "add"), ("Tab", "artists/albums/genres/folders"), ("Space", "more")]
     MODES = ["Artists", "Albums", "Genres", "Folders"]
 
     def __init__(self, win):
@@ -508,7 +508,7 @@ class Library(View):
             self._fill(2, [{"kind": "song", "song": s} for s in songs], f"Search “{q}” · {len(songs)}")
             self._focus(2)
             if not songs:
-                self.win.toast(f"Nothing in your library matches “{q}” · 3 then / searches YouTube")
+                self.win.toast(f"Nothing in your library matches “{q}” · Space f y searches YouTube")
             else:
                 self.win.toast("Esc goes back to browsing")
         self.core.bg(lambda: self.core.search_library(q), then)
@@ -517,7 +517,7 @@ class Library(View):
 # ===================================================================== youtube
 class YouTube(View):
     name, title, glyph = "youtube", "YouTube", G["yt"]
-    hints = [("/", "search"), ("Enter", "play"), ("a", "add"), ("A", "play next"), ("D", "download")]
+    hints = [("Enter", "play"), ("a", "add"), ("A", "play next"), ("D", "download"), ("Space", "more")]
 
     def __init__(self, win):
         super().__init__(win)
@@ -608,7 +608,7 @@ class YouTube(View):
 # ===================================================================== playlists
 class Playlists(View):
     name, title, glyph = "playlists", "Playlists", G["list"]
-    hints = [("Enter", "play"), ("a", "add"), ("dd", "delete"), (":w name", "save the queue"), (":e name", "load")]
+    hints = [("Enter", "play"), ("a", "add"), ("dd", "delete"), (":w name", "save the queue"), ("Space", "more")]
 
     def __init__(self, win):
         super().__init__(win)
@@ -692,7 +692,7 @@ class Playlists(View):
 # ===================================================================== downloads
 class Downloads(View):
     name, title, glyph = "downloads", "Downloads", G["dl"]
-    hints = [("Enter", "play"), ("R", "retry"), ("dd", "delete the file")]
+    hints = [("Enter", "play"), ("R", "retry"), ("dd", "delete the file"), ("Space", "more")]
 
     def __init__(self, win):
         super().__init__(win)
@@ -751,7 +751,7 @@ class Downloads(View):
         if k == "Return":
             self._play(d)
             return True
-        # R, not r: r cycles repeat everywhere, this row or not.
+        # R, not r: r refreshes everywhere, this row or not.
         if k == "R" and "job" in d:
             self.core.retry(d["job"])
             return True

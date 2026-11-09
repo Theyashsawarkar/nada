@@ -2,8 +2,30 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
-## Unreleased
+## v0.3.0 -- 2026-11-09
 
+- The tabs show just their name (they showed 0..4, which are counts now);
+  their tooltip says which keys switch to them: `H` / `L`, `Space t`, `Ctrl+0..4`.
+- **`Space` is the leader**, the same key grammar as every Vayu tool
+  (ADR 9). One key for what you do all the time, everything else
+  `Space`, a group, the thing: `Space t` tabs, `Space u` toggles, `Space y`
+  copy, `Space f` search a scope, `Space d` delete, `Space o b` open in the
+  browser, `Space g p` the playing song, `Space i` info, `Space p` playback (shuffle, repeat, autoplay, sleep), `Space l` lyrics, `Space x` downloads. Wait after
+  `Space` (or `g`, `d`, `y`) and a strip shows what can come next; `Esc`
+  cancels. `Space Space` is a palette of every action; `?` and `Space ?`
+  show every key of the tab you're on, made from the keymap.
+- Keys moved: play / pause is `p` (was `Space`; the mini player keeps `Space`); paste is `gp` /
+  `gP`; tabs are `H` / `L` and `Space t` (`Ctrl+Tab`, `Ctrl+0..4` too);
+  digits are only counts, no more waiting after a lone digit; `s` shuffle is `Space p s`; `r` repeat is `Space p r` and `r` refreshes; `L` lyrics is `Space u l` (`L` is the next tab); `i` info is `Space i`; `zz` is `Space g p`; `z` opens the mini player at once.
+  An old key says where it went, for one release.
+- Confirmations take `y` only (`Enter` no longer confirms).
+- Switching tabs (`Ctrl+Tab`, a click) or hiding the window drops what was waiting: a
+  half-typed key (`Space` …), an unanswered question (a `y` on the next tab no longer
+  clears the queue), the palette and the key sheet of the old tab.
+- Keys are data: `nada/keymap.py`, on Vyom's `keys.py` (vendored); the
+  `# keybind:` lines and the README's key tables are generated from it
+  (`scripts/keybinds.py`, checked by the tests). Every key is documented,
+  the Playlists view and the `x` / `dG` aliases included.
 - Every corner is rounded: the slim progress bar and the website's callouts.
 - A logo and a shloka at the top of the README and the website: every Vayu tool has them now.
 

@@ -24,7 +24,7 @@ it must work on any desktop with MPD, without Vayu.
 - Never block the GTK main loop: anything that touches the network or
   yt-dlp goes through `core.bg(work, then)`; only `then` touches widgets.
   Quick MPD commands are fine on the main loop.
-- Every key has a `# keybind: Nada/<scope> | <keys> | <Verb> ...` line (Vayu's
+- Every key is a bind in `nada/keymap.py` (data on Vyom's `keys.py`, vendored as `nada/keys.py`: update it with Vyom's `scripts/vendor-keys.sh`, never by hand); the Space grammar is the one every Vayu tool shares. After changing a key run `python3 scripts/keybinds.py`: it writes the `# keybind: Nada/<scope>:<mode> | <keys> | <Verb> ...` lines (Vayu's
   keybinding search reads them) and a row in the README (CI checks).
 - Detect, don't assume: no MPD, no yt-dlp, no layer shell, no mixer each
   mean a clear message, never a crash.

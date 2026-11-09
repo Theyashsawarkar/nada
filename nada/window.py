@@ -1,97 +1,26 @@
 """The player window: tabs, the right pane, controls, the vim mode line,
-and the vim key engine (modes, counts, pending operators, registers)."""
+and the vim key engine: keymap.py's binds through Vyom's keys.py (counts,
+sequences, the Space leader), plus visual mode, registers, : and /."""
+import logging
 import re
 
-from gi.repository import Gdk, GLib, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 
-from . import art, lyrics, youtube
-from .core import fmt_time
+from . import art, keymap, keys, lyrics, youtube
 from .config import STATE
+from .core import fmt_time
 from .finder import Finder
+from .leader import KeySheet, Palette, WhichKey
 from .search import SearchPanel
 from .views import Downloads, Home, Library, NowPane, Playlists, Queue, YouTube
-from .widgets import G, box, hint, keycap, label, picture, tile
+from .widgets import G, box, hint, label, picture, tile
 
-# keybind: Nada/everywhere | Ctrl+Tab / Ctrl+Shift+Tab | Switch to the next / previous tab (wraps around)
-# keybind: Nada/everywhere | / | Open the search panel (your library, YouTube, playlists, : commands, this list)
-# keybind: Nada/everywhere | Ctrl+0..4 | Switch to that numbered tab at once (the number shown on it)
-# keybind: Nada/everywhere | 0 | Switch to Now (the lyrics)
-# keybind: Nada/everywhere | 1 | Switch to the queue
-# keybind: Nada/everywhere | 2 | Switch to the library
-# keybind: Nada/everywhere | 3 | Switch to playlists
-# keybind: Nada/everywhere | 4 | Switch to downloads
-# keybind: Nada/everywhere | j / k | Move down / up a song (counts work: 5j)
-# keybind: Nada/everywhere | gg / G | Jump to the top / bottom (12G: to the 12th)
-# keybind: Nada/everywhere | Ctrl+d / Ctrl+u | Scroll half a page down / up
-# keybind: Nada/everywhere | Space | Toggle play / pause
-# keybind: Nada/everywhere | Enter | Play the selected song
-# keybind: Nada/everywhere | . / , | Seek forward / back 10 seconds (3. = 30 s)
-# keybind: Nada/everywhere | > / < | Play next / previous song
-# keybind: Nada/everywhere | = / - | Raise / lower volume
-# keybind: Nada/everywhere | m | Toggle mute
-# keybind: Nada/everywhere | s | Toggle shuffle
-# keybind: Nada/everywhere | r | Cycle repeat (off, all, this song)
-# keybind: Nada/everywhere | M | Toggle autoplay (more like this after your songs)
-# keybind: Nada/everywhere | V | Select several songs (visual mode)
-# keybind: Nada/everywhere | u | Restore the last change (undo)
-# keybind: Nada/everywhere | Ctrl+r | Restore an undone change (redo)
-# keybind: Nada/everywhere | n / N | Jump to the next / previous match (after a "This list" search)
-# keybind: Nada/everywhere | : | Run a command (:w name, :sleep 30m, :yt query…)
-# keybind: Nada/everywhere | ? | Show all keys
-# keybind: Nada/everywhere | z | Switch to the mini player
-# keybind: Nada/everywhere | q / Esc | Close the window (the music keeps playing)
-# keybind: Nada/queue | dd | Remove the song from the queue (V: the selection)
-# keybind: Nada/queue | yy | Copy the song (yank)
-# keybind: Nada/queue | p / P | Paste removed or copied songs below / above
-# keybind: Nada/queue | J / K | Move the song down / up
-# keybind: Nada/queue | A | Move the song to play next
-# keybind: Nada/queue | D | Save the YouTube song to your music folder (download)
-# keybind: Nada/queue | L | Show the lyrics on the right
-# keybind: Nada/queue | zz | Jump to the song that's playing
-# keybind: Nada/library | h / l | Move between the columns
-# keybind: Nada/library | Tab | Switch between artists, albums, genres and folders
-# keybind: Nada/library | a / A | Add to the end of the queue / to play next
-# keybind: Nada/youtube | a / A | Add the result to the end of the queue / to play next
-# keybind: Nada/youtube | D | Save the result to your music folder (download)
-# keybind: Nada/downloads | R | Restart a failed download
-# keybind: Nada/downloads | dd | Delete the saved file (asks first)
-# keybind: Nada/now | L | Open the lyrics panel (pick a version, the script, the timing)
-# keybind: Nada/lyrics panel | j / k | Move through the versions the sources have
-# keybind: Nada/lyrics panel | Enter | Use these lyrics (kept for the song)
-# keybind: Nada/lyrics panel | s | Switch the script: Hinglish (Latin letters) or Devanagari
-# keybind: Nada/lyrics panel | [ / ] | Show the lyrics earlier / later by 0.25 s (kept for the song)
-# keybind: Nada/lyrics panel | Esc | Close the lyrics panel
-# keybind: Nada/search | Tab / Shift+Tab | Switch where to look (all, YouTube, library, playlists, commands, this list)
-# keybind: Nada/search | Ctrl+j / Ctrl+k | Move through the results while typing
-# keybind: Nada/search | Enter | Play the result (a playlist: replace the queue; a command: run it)
-# keybind: Nada/search | Ctrl+Enter | Play the result next
-# keybind: Nada/search | Shift+Enter | Add the result to the end of the queue
-# keybind: Nada/search | Ctrl+d | Download the result (YouTube)
-# keybind: Nada/search | Ctrl+u | Clear the search box
-# keybind: Nada/search | Ctrl+x | Clear recent searches
-# keybind: Nada/search | Esc | Close the search panel
-
-# Keys a count can go before (5j, 3., 2dd); after any other key, a lone
-# number is the tab it names.
-COUNTED = {"j", "k", "h", "l", "G", "g", "d", "y", ".", ",", ">", "<", "=", "+", "-", "[", "]", "{", "}", "J", "K",
-           "x", "p", "P", "u", "C-d", "C-u", "C-r", "Page_Down", "Page_Up", "D", "A", "a"}
-TABS = ["home", "queue", "library", "playlists", "downloads"]   # YouTube's results: a page, from the search panel
+# Every key is in keymap.py (data on Vyom's keys.py); its `# keybind:`
+# lines are generated there. This file runs them.
+TABS = keymap.TABS
 KEYNAMES = {"space": " ", "period": ".", "comma": ",", "greater": ">", "less": "<", "equal": "=", "plus": "+",
             "minus": "-", "slash": "/", "colon": ":", "question": "?", "KP_Enter": "Return", "Up": "k", "Down": "j",
             "KP_Add": "+", "KP_Subtract": "-", "BackSpace": "BackSpace", "bracketleft": "[", "bracketright": "]"}
-HELP = [
-    ("Find & move", [("/", "search: library, YouTube"), ("j k", "down / up (5j)"), ("gg G", "top / bottom"),
-                     ("h l", "columns (library)"), ("zz", "the playing song"), ("0–4", "now, queue, library…"),
-                     ("Esc", "back / close")]),
-    ("Play", [("Enter", "play the selected song"), ("space", "play / pause"), (". ,", "forward / back 10 s"),
-              ("> <", "next / previous song"), ("= - m", "volume, mute"), ("s r", "shuffle, repeat"), ("M", "autoplay on/off")]),
-    ("Queue", [("dd", "remove"), ("J K", "move down / up"), ("yy p P", "copy, paste below / above"), ("A", "play next"),
-               ("V", "select several"), ("u Ctrl+r", "undo, redo"), ("D", "download (YouTube)")]),
-    ("More", [("L", "lyrics panel (Now)"), ("n N", "next match"), (":", "commands"), ("i", "song info"),
-              ("z", "mini player"), ("q Esc", "close (keeps playing)"), (":w :e", "save / load a playlist")]),
-]
-COMMANDS = ":w <name> save the queue · :e <name> load a playlist · :yt <search> · :play <search> · :sleep 30m · :vol 40 · " \
-           ":seek 1:30 · :lyrics <search> · :autoplay on/off · :clear · :dl · :q · :qa"
 
 
 class Window(Gtk.ApplicationWindow):
@@ -101,14 +30,14 @@ class Window(Gtk.ApplicationWindow):
         self.add_css_class("nada")
         self.set_default_size(1180, 720)
         self.register = []
-        self.count, self.pending, self.mode = "", "", "NORMAL"
+        self.m = keys.Machine()   # a count and a pending sequence between keys
+        self.mode = "NORMAL"
+        self.notes_shown = set()
         self.confirm_cb = None
         self.tab = "home"
         self.thumbs, self.thumb_wait = {}, set()
         self.thumb_timer = None
         self.toast_timer = None
-        self.digit_timer = None
-        self.z_timer = None
         self.sleep_timer = None
         self.dragging = False
 
@@ -130,7 +59,10 @@ class Window(Gtk.ApplicationWindow):
                 continue
             b = Gtk.Button()
             b.add_css_class("tab")
-            b.set_child(box(keycap(str(i)), label(v.title, ellipsize=False), spacing=7))
+            # Just the name: digits are counts now (5j). H / L step through the
+            # tabs, Space t picks one; the tooltip says which keys.
+            b.set_child(label(v.title, ellipsize=False))
+            b.set_tooltip_text(f"{v.title}: H / L step through the tabs, Ctrl+{i} jumps here")
             b.set_focusable(False)
             b.connect("clicked", lambda _b, n=v.name: self.switch(n))
             self.tabbtn[v.name] = b
@@ -168,9 +100,13 @@ class Window(Gtk.ApplicationWindow):
                                       valign=Gtk.Align.END, can_target=False)
         self.toast_rev.set_child(box(self.toast_lab, cls="toast"))
         overlay.add_overlay(self.toast_rev)
-        self.help = self._help()
-        self.help.set_visible(False)
+        self.help = KeySheet(keymap.COMMANDS)
         overlay.add_overlay(self.help)
+        # the leader: what can come next, and every action (Space Space)
+        self.which = WhichKey()
+        overlay.add_overlay(self.which)
+        self.palette = Palette(lambda b: self.run(b.action, 1, False))
+        overlay.add_overlay(self.palette)
         # the lyrics panel (L on Now): pick a version, the script, the timing
         self.lpanel = self._lyrics_panel()
         self.lpanel.set_visible(False)
@@ -190,10 +126,10 @@ class Window(Gtk.ApplicationWindow):
         overlay.remove_overlay(self.toast_rev)
         overlay.add_overlay(self.toast_rev)
 
-        keys = Gtk.EventControllerKey()
-        keys.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
-        keys.connect("key-pressed", self._key)
-        self.add_controller(keys)
+        ctl = Gtk.EventControllerKey()
+        ctl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        ctl.connect("key-pressed", self._key)
+        self.add_controller(ctl)
         self.connect("close-request", lambda *_: (self.hide_window(), True)[1])
         self.connect("notify::visible", lambda *_: setattr(self.core, "window_visible", self.get_visible()))
 
@@ -222,9 +158,9 @@ class Window(Gtk.ApplicationWindow):
         controls in the middle, time and volume on the right."""
         c = self.core
         step = lambda: c.conf["seek_step"]
-        self.pp = self._btn(G["play"], "Play / pause  (space)", c.toggle, big=True)
-        self.shuf = self._btn(G["shuffle"], "Shuffle  (s)", c.toggle_random)
-        self.rep = self._btn(G["repeat"], "Repeat: off, all, this song  (r)", c.cycle_repeat)
+        self.pp = self._btn(G["play"], "Play / pause  (p)", c.toggle, big=True)
+        self.shuf = self._btn(G["shuffle"], "Shuffle  (Space p s)", c.toggle_random)
+        self.rep = self._btn(G["repeat"], "Repeat: off, all, this song  (Space p r)", c.cycle_repeat)
         ctl = box(self.shuf, self._btn(G["prev"], "Previous song  (<)", c.prev),
                   self._btn(G["back"], "Back 10 seconds  (,)", lambda: c.seek(-step())), self.pp,
                   self._btn(G["fwd"], "Forward 10 seconds  (.)", lambda: c.seek(step())),
@@ -417,19 +353,6 @@ class Window(Gtk.ApplicationWindow):
             GLib.timeout_add(300, lambda: (self._lp_chips(), False)[1])
         return True
 
-    def _help(self):
-        grid = Gtk.Grid(column_spacing=34, row_spacing=4, column_homogeneous=True)
-        for col, (title, rows) in enumerate(HELP):
-            grid.attach(label(title.upper(), "h"), col, 0, 1, 1)
-            for r, (k, d) in enumerate(rows, 1):
-                b = box(spacing=8)
-                b.append(box(*[keycap(x) for x in k.split()], spacing=3, halign=Gtk.Align.END))
-                b.append(label(d, "d"))
-                grid.attach(b, col, r, 1, 1)
-        cmds = label(COMMANDS, "d", wrap=True, margin_top=14)
-        return box(grid, cmds, label("? or Esc closes this", "dim", margin_top=10), vertical=True, cls="help",
-                   valign=Gtk.Align.CENTER, halign=Gtk.Align.CENTER)
-
     # ------------------------------------------------------------ tabs
     def switch(self, name):
         if name not in self.views:
@@ -445,14 +368,26 @@ class Window(Gtk.ApplicationWindow):
         if name == "home":
             self.now.set_page("now")
         self.views[name].shown()
+        self.drop_pending()
         self.set_mode("NORMAL")
         self._hints()
         if self.cmdline.get_visible():
             self._cmd_close()
 
+    def drop_pending(self):
+        """Another tab (or the window hidden): what was waiting goes. A key
+        sequence or count, an unanswered question (else a y on the new tab
+        would answer it), the palette and key sheet of the old tab."""
+        self.m.reset()
+        self.which.cancel()
+        self.confirm_cb = None
+        self._show_pending()
+        self.palette.close()
+        self.help.set_visible(False)
+
     def toggle_lyrics(self):
         if self.tab == "home":
-            self.toast("Home already shows the lyrics · 1 for the queue")
+            self.toast("Now already shows the lyrics · L for the queue")
             return
         page = "now" if self.now.stack.get_visible_child_name() == "lyrics" else "lyrics"
         self.now.set_page(page)
@@ -477,7 +412,7 @@ class Window(Gtk.ApplicationWindow):
             self.hints.append(hint(k, w))
 
     def _show_pending(self):
-        self.msg.set_text(f"{self.count}{self.pending}")
+        self.msg.set_text(self.m.typed())
 
     def toast(self, text):
         self.toast_lab.set_text(text)
@@ -494,7 +429,7 @@ class Window(Gtk.ApplicationWindow):
     def confirm(self, question, cb):
         self.confirm_cb = cb
         self.set_mode("CONFIRM")
-        self.msg.set_text(f"{question}  y / n")
+        self.msg.set_text(f"{question}  y yes · any other key no")
 
     # ------------------------------------------------------------ core events
     def _core_event(self, e):
@@ -585,6 +520,7 @@ class Window(Gtk.ApplicationWindow):
         self._tick()
 
     def hide_window(self):
+        self.drop_pending()
         self.set_visible(False)
         self.core.window_visible = False
 
@@ -592,17 +528,17 @@ class Window(Gtk.ApplicationWindow):
     def _key(self, ctrl, keyval, code, state):
         name = Gdk.keyval_name(keyval) or ""
         ctrl_on = bool(state & Gdk.ModifierType.CONTROL_MASK)
-        # Tabs, the same keys as Vyom's panels, from anywhere (even the
-        # search box): Ctrl+Tab / Ctrl+Shift+Tab cycle, Ctrl+0..5 jump at
-        # once (a bare digit waits a moment, in case it's a count like 5j).
+        # Tabs from anywhere (even the search box): Ctrl+Tab / Ctrl+Shift+Tab
+        # cycle, Ctrl+0..4 jump.
         if ctrl_on and name in ("Tab", "ISO_Left_Tab"):
             back = name == "ISO_Left_Tab" or bool(state & Gdk.ModifierType.SHIFT_MASK)
-            i = TABS.index(self.tab) if self.tab in TABS else 0
-            self.switch(TABS[(i + (-1 if back else 1)) % len(TABS)])
+            self.step_tab(-1 if back else 1)
             return True
         if ctrl_on and re.fullmatch(r"[0-4]", name):
             self.switch(TABS[int(name)])
             return True
+        if self.palette.get_visible():
+            return self.palette.key(name, ctrl_on)
         if self.search.get_visible():
             return self.search.key(name, state)
         if self.lpanel.get_visible():
@@ -619,101 +555,184 @@ class Window(Gtk.ApplicationWindow):
                 return True
             return False
         if focus is yt_entry or (focus is not None and focus.is_ancestor(yt_entry)):
-            if name == "Escape":
-                self.root.grab_focus()
-                self.set_mode("NORMAL")
-                return True
-            if name in ("Down", "Tab"):
+            if name in ("Escape", "Down", "Tab"):
                 self.root.grab_focus()
                 self.set_mode("NORMAL")
                 return True
             return False
         if self.confirm_cb:
+            if keys.is_modifier(name):
+                return True
             cb, self.confirm_cb = self.confirm_cb, None
             self.set_mode("NORMAL")
             self.msg.set_text("")
-            if name in ("y", "Y", "Return"):
+            if name == "y":
                 cb()
             else:
                 self.toast("Cancelled")
             return True
         if self.help.get_visible():
-            if name in ("question", "Escape", "q"):
-                self.help.set_visible(False)
-            return True
-        if name in ("Shift_L", "Shift_R", "Control_L", "Control_R", "Alt_L", "Alt_R", "Super_L", "Super_R", "ISO_Level3_Shift"):
+            return self.help.key(name)
+        if keys.is_modifier(name):
             return False
-        k = KEYNAMES.get(name, name)
+        mods = {m for m, mask in (("ctrl", Gdk.ModifierType.CONTROL_MASK), ("shift", Gdk.ModifierType.SHIFT_MASK),
+                                  ("alt", Gdk.ModifierType.ALT_MASK)) if state & mask}
+        tok = keys.token(name, mods)
+        if tok is None:
+            return False
+        # the old engine's name for the key: what dispatch() and the views know
+        legacy = KEYNAMES.get(name, name)
         if ctrl_on:
-            k = "C-" + k.lower()
-        # counts (a lone 0 or 1-5 with nothing after it switches tabs)
-        if re.fullmatch(r"[0-9]", k) and not self.pending:
-            if k == "0" and not self.count:
-                self.switch("home")
-                return True
-            self.count += k
+            legacy = "C-" + legacy.lower()
+        km = self.keymap_now()
+        had_count = bool(self.m.count)
+        if tok == "<" and not self.m.pending:
+            # keys.py reads "<" as the start of <CR>, <C-d>… and would wait:
+            # run it at once (with its count)
+            n = int(self.m.count or 1)
+            self.m.reset()
             self._show_pending()
-            if self.digit_timer:
-                GLib.source_remove(self.digit_timer)
-            if re.fullmatch(r"[1-4]", self.count):
-                c = self.count
-                self.digit_timer = GLib.timeout_add(650, self._digit_tab, c)
+            self.which.cancel()
+            self.run(km.table["<"].action, n, had_count)
             return True
-        if self.digit_timer:
-            GLib.source_remove(self.digit_timer)
-            self.digit_timer = None
-            # A lone tab number followed by a key that takes no count (V, Esc,
-            # /, Tab…), or a 1 (a count of one changes nothing): the number
-            # meant the tab. Go there, then do the key.
-            if re.fullmatch(r"[1-4]", self.count) and (k not in COUNTED or self.count == "1"):
-                tab, self.count = self.count, ""
-                self._show_pending()
-                self.switch(TABS[int(tab)])
-        n = int(self.count or "1")
-        had_count = bool(self.count)
-        self.count = ""
-        if self.pending:
-            combo, self.pending = self.pending + k, ""
-            if self.z_timer:
-                GLib.source_remove(self.z_timer)
-                self.z_timer = None
-            self._show_pending()
-            if combo in ("gg", "dd", "dG", "yy", "zz"):
-                self.dispatch(combo, n, had_count)
+        r = self.m.feed(km, tok)
+        self._show_pending()
+        if r.kind == "pending":
+            if self.m.pending:
+                self.which.schedule(km, self.m.pending)
             return True
-        view = self.views[self.tab]
-        lst = view.list()
-        visual = lst is not None and lst.vstart is not None
-        if k in ("g", "d", "y") and not (visual and k in ("d", "y")):
-            if k != "g" and self.tab not in ("queue", "playlists", "downloads"):
-                return self.dispatch(k, n, had_count) or True
-            self.pending = k
-            self.count = str(n) if had_count else ""
-            self._show_pending()
+        self.which.cancel()
+        if r.kind == "cancel":
             return True
-        if k == "z":
-            self.pending = "z"
-            self._show_pending()
-            self.z_timer = GLib.timeout_add(450, self._z_alone)
+        if r.kind == "unknown":
+            if len(keys.tokens(r.seq)) == 1:
+                self.dispatch(legacy, r.count, had_count)   # a key the views know that the keymap doesn't list
+            else:
+                self.toast(f"{keys.spell(r.seq)} isn't a key here · Space ? shows them")
             return True
-        self.dispatch(k, n, had_count)
+        self.run(r.bind.action, r.count, had_count)
         return True
 
-    def _digit_tab(self, c):
-        self.digit_timer = None
-        if self.count == c:
-            self.count = ""
-            self._show_pending()
-            self.switch(TABS[int(c)])
-        return False
+    def keymap_now(self):
+        lst = self.views[self.tab].list()
+        visual = lst is not None and lst.vstart is not None
+        return keys.Keymap(keymap.binds_for(self.tab, visual), keymap.GROUPS)
 
-    def _z_alone(self):
-        self.z_timer = None
-        if self.pending == "z":
-            self.pending = ""
-            self._show_pending()
-            self.app.show_mini()
-        return False
+    def run(self, action, n=1, had_count=False):
+        """Run a keymap action (see keymap.py): do:, tab:, call:, moved:."""
+        if not isinstance(action, str):
+            return
+        action, _, note = action.partition("|note:")
+        kind, _, arg = action.partition(":")
+        if kind == "do":
+            self.dispatch(arg, n, had_count)
+        elif kind == "tab":
+            if arg in ("+1", "-1"):
+                self.step_tab(int(arg) * n)
+            else:
+                self.switch(arg)
+        elif kind == "call":
+            meth, _, extra = arg.partition(":")
+            getattr(self, "k_" + meth)(*([extra] if extra else []))
+        elif kind == "moved":
+            self.toast(f"That key moved: it's {arg} now")
+        if note and note not in self.notes_shown:
+            self.notes_shown.add(note)
+            self.toast(note)
+
+    def step_tab(self, d):
+        i = TABS.index(self.tab) if self.tab in TABS else 0
+        self.switch(TABS[(i + d) % len(TABS)])
+
+    # keymap actions (call:<name> runs k_<name>)
+    def k_toggle_play(self):
+        self.core.toggle()
+
+    def k_palette(self):
+        km = self.keymap_now()
+        rows = [r for r in keys.palette_rows(km)
+                if isinstance(r[2].action, str) and not r[2].action.startswith(("moved:", "call:palette"))]
+        self.palette.open(rows)
+
+    def k_keysheet(self):
+        extra = [(f"{scope} (its own keys)", [(keys.spell(b.seq), b.desc) for b in bs])
+                 for scope, _mode, bs in keymap.PANELS if scope != "leader"]
+        self.help.open(self.keymap_now(), keymap.where(self.tab), extra)
+
+    def k_mini(self):
+        self.app.show_mini()
+
+    def k_lyrics_pane(self):
+        if self.tab == "home":
+            self.open_lyrics_panel()
+        else:
+            self.toggle_lyrics()
+
+    def k_lyrics_panel(self):
+        self.open_lyrics_panel()
+
+    def k_lyrics_script(self):
+        c = self.core
+        c.set_lyrics_script("native" if c.lyrics_script == "latin" else "latin")
+        self.toast("Lyrics in Latin letters (Hinglish)" if c.lyrics_script == "latin" else "Lyrics as written (Devanagari)")
+
+    def k_lyrics_nudge(self, d):
+        off = self.core.nudge_lyrics(float(d))
+        self.toast(f"Lyrics {'earlier' if float(d) < 0 else 'later'}: {off:+.2f} s · kept for this song")
+
+    def k_sleep(self):
+        self.sleep("off" if self.sleep_timer else "30m")
+
+    def _song_link(self, s):
+        return youtube.watch_url(s["yt"]) if s.get("yt") else s.get("file", "")
+
+    def _copy(self, text, what):
+        self.get_clipboard().set(text)
+        self.toast(f"Copied {what}")
+
+    def k_copy_song(self):
+        s = self.core.current
+        if s:
+            self._copy(f"{s['title']} · {s.get('artist') or s.get('channel') or ''}".strip(" ·"), "the song")
+        else:
+            self.toast("Nothing playing")
+
+    def k_copy_link(self):
+        s = self.core.current
+        if s:
+            self._copy(self._song_link(s), "the link" if s.get("yt") else "the file path")
+        else:
+            self.toast("Nothing playing")
+
+    def k_search(self, scope):
+        self.open_search("", int(scope))
+
+    def k_goto_playing(self):
+        if self.tab != "queue":
+            self.switch("queue")
+        self.dispatch("zz")
+
+    def k_open_browser(self):
+        s = self.core.current
+        if not s or not s.get("yt"):
+            self.toast("The playing song isn't from YouTube" if s else "Nothing playing")
+            return
+        try:
+            Gio.AppInfo.launch_default_for_uri(youtube.watch_url(s["yt"]), None)
+        except GLib.Error as e:
+            self.toast(f"Couldn't open the browser: {e.message}")
+
+    def k_rescan(self):
+        try:
+            self.core.cmd("update")
+        except Exception:   # no MPD: the lists reload anyway
+            logging.getLogger("nada.window").debug("rescan: MPD didn't take update", exc_info=True)
+        for v in self.views.values():
+            v.refresh(None)
+        self.toast("Rescanning your music folder")
+
+    def k_clear_queue(self):
+        self.confirm("Clear the queue?", lambda: (self.core.clear(), self.toast("Queue cleared · u brings it back")))
 
     def dispatch(self, k, n=1, had_count=False):
         c = self.core
@@ -749,7 +768,7 @@ class Window(Gtk.ApplicationWindow):
                 return True
         elif self.tab == "home" and k in ("j", "k", "gg", "G", "dd", "J", "K", "V", "yy", "p", "P", "A", "C-d", "C-u"):
             self.switch("queue")
-            self.toast("The queue (1) · 0 goes back to the lyrics")
+            self.toast("The queue · H goes back to the lyrics")
             return self.dispatch(k, n, had_count)
         if view.key(k, n, set()):
             return True
@@ -781,10 +800,7 @@ class Window(Gtk.ApplicationWindow):
         elif k == "M":
             c.set_autoplay(not c.autoplay)
         elif k == "L":
-            if self.tab == "home":
-                self.open_lyrics_panel()
-            else:
-                self.toggle_lyrics()
+            self.k_lyrics_pane()
         elif k == "u":
             c.undo()
         elif k == "C-r":
@@ -802,7 +818,7 @@ class Window(Gtk.ApplicationWindow):
         elif k == ":":
             self._cmd_open(":")
         elif k == "?":
-            self.help.set_visible(True)
+            self.k_keysheet()
         elif k in ("q", "Escape"):
             self.hide_window()
         elif k == "Tab":
@@ -895,7 +911,7 @@ class Window(Gtk.ApplicationWindow):
             if c.current:
                 c.download(c.current)
         elif cmd == "help":
-            self.help.set_visible(True)
+            self.k_keysheet()
         else:
             self.toast(f"Not a command: {cmd} · ? lists them")
 
