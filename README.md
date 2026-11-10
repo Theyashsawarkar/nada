@@ -16,8 +16,9 @@
 <!-- /identity -->
 
 <p align="center">
-  <b>A keyboard-driven music player for your files and YouTube, with synced lyrics, autoplay and downloads.</b><br>
-  Vim keys for everything. Built on MPD, styled like glass, opens on one key.
+  <b>A music player for your desktop and your phone: your files and YouTube Music, with synced lyrics, autoplay and downloads.</b><br>
+  On Linux: vim keys for everything, built on MPD, styled like glass.<br>
+  On Android: no account, everything kept on the phone, a feed that learns what you like.
 </p>
 
 <p align="center">
@@ -42,11 +43,21 @@ nāda lines up what comes next; reorder or remove anything with vim keys.
 Lyrics scroll along with the song. If you like a YouTube song, `D` saves it
 to your music folder, with its tags, cover and lyrics, while it keeps
 playing. It runs on [MPD](https://www.musicpd.org), so your library, queue
-and playback carry on with the window closed.
+and playback carry on with the window closed. Its phone side, [nāda for
+Android](#on-your-phone), brings the same music to your pocket.
+
+## Download
+
+<div class="cards">
+<a class="card" href="#install"><div class="n">Linux · GTK 4 · MPD</div><h3>nāda for the desktop</h3><p>The keyboard-driven player: your files and YouTube in one queue, synced lyrics, a floating mini player. Install it with git in two lines.</p><p><b>Install on Linux →</b></p></a>
+<a class="card" href="https://github.com/Theyashsawarkar/nada/releases"><div class="n">Android · APK · coming soon</div><h3>nāda for your phone</h3><p>YouTube Music with no account, history and a feed that learn you on the phone, home-screen widgets. The APK will be on the Releases page.</p><p><b>Download the APK →</b></p></a>
+</div>
 
 ## Contents
 
+- [Download](#download)
 - [Features](#features)
+- [On your phone](#on-your-phone)
 - [Install](#install)
 - [Usage](#usage)
 - [Keys](#keys)
@@ -114,9 +125,56 @@ and playback carry on with the window closed.
   <img alt="The mini player: cover, title, the current lyric line, controls" src="assets/screenshots/mini.png" width="40%">
 </p>
 
+## On your phone
+
+<p align="center">
+  <img alt="nāda for Android, four screens: Home with a mix made for tonight; Now playing, the cover as a turning record ringed by a spectrum, the seek bar a waveform; synced lyrics, the sung line lit; Insights, listening time, streak and a 24-hour clock of when you listen" src="assets/screenshots/mobile.png" width="100%">
+</p>
+
+nāda for Android is the same player made for a phone: dark glass over
+colour taken from the cover that's playing, with pink always marking
+where you are. **There is nothing to sign in to and no server.** Songs
+come from YouTube Music, and everything else stays on the phone.
+
+- **A feed that learns you, on the phone.** Every play is a row in a
+  SQLite database on the phone. Finishing, replaying, liking or
+  downloading a song counts for it, skipping it early counts against it,
+  and older plays slowly count less. Home is built from that, mixed with
+  YouTube Music's own "related" songs: mixes for the time of day,
+  "More like" your most-replayed song, "Rediscover" what you loved a
+  month ago. Each row says why it's there.
+- **Offline first.** YouTube Music is the only thing the app talks to.
+  Song details, covers, lyrics and related lists are kept once fetched;
+  with no signal, Home and search use your downloads and history.
+- **Search that answers at once.** Your history and downloads answer
+  while you type, even in airplane mode; YouTube Music answers below.
+- **Lyrics, large and in time**, the sung line lit, Hindi in Latin
+  letters or Devanagari, as on the desktop.
+- **Insights:** listening time, streaks, top artists, moods and the hours
+  you listen at, worked out on the phone and never uploaded.
+- **Downloads** keep their cover, lyrics and tags; Wi-Fi only by default.
+
+<p align="center">
+  <img alt="The widgets on an Android home screen (Now playing with a waveform and controls, an Orb that fills as the song plays, Today's minutes and streak, Made for tonight mixes, a thin Pulse strip), beside the Search and Library screens" src="assets/screenshots/mobile-widgets.png" width="100%">
+</p>
+
+**Widgets:** Now playing (4×2), Orb (2×2), Today (2×2), Made for tonight
+(4×2) and Pulse (4×1), plus the playing song on the lock screen and the
+always-on display. Each plays, pauses and skips without opening the app.
+
+The Android app is being built (Expo and React Native, with SQLite on the
+phone); the screens above are its design. The first APK will be on the
+[Releases](https://github.com/Theyashsawarkar/nada/releases) page.
+
 ## Install
 
-### Requirements
+### Android
+
+Download `nada.apk` from the [Releases](https://github.com/Theyashsawarkar/nada/releases)
+page on your phone and open it (Android asks once to allow installs from
+your browser). It updates the same way. The first APK isn't out yet.
+
+### Linux: what it needs
 
 - Python 3.11+, PyGObject, GTK 4
 - [MPD](https://www.musicpd.org) (the engine: it plays, keeps the queue and indexes your music)
@@ -135,7 +193,7 @@ has a five-line config. nāda finds MPD the way every MPD client does:
 `MPD_HOST` / `MPD_PORT`, else MPD's socket in `$XDG_RUNTIME_DIR/mpd/socket`,
 else `localhost:6600`.
 
-### nāda
+### Linux: nāda
 
 ```sh
 git clone https://github.com/Theyashsawarkar/nada ~/.local/share/nada

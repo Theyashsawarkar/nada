@@ -2,6 +2,13 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
+## Unreleased
+
+- The README and the website cover nāda for Android too: a Download section
+  with the desktop app and the phone's APK (coming soon), and "On your phone"
+  with the app's screens, its widgets and how it works (no account, history
+  and a feed kept on the phone in SQLite, YouTube Music its only connection).
+
 ## v0.3.0 -- 2026-11-09
 
 - The tabs show just their name (they showed 0..4, which are counts now);
