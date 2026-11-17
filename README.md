@@ -220,8 +220,12 @@ nada daemon | quit         start / stop the player (MPD keeps playing)
 
 The player is one resident process; `nada` only sends it a D-Bus message,
 so it opens at once. `ctl`, `status` and `waybar` talk to MPD directly and
-work even when the player isn't running. Closing the window (`q`, `Esc`)
-only hides it: the music, autoplay and downloads carry on.
+work even when the player isn't running. `q` and `Esc` only hide the
+window: the music, autoplay and downloads carry on. `:q` (or `nada quit`)
+closes nāda itself; MPD finishes what's queued.
+
+`nada` is a toggle: closed, it opens; open and focused, it hides; open but
+behind other windows or on another workspace, it comes to you, focused.
 
 ## Keys
 
@@ -483,7 +487,7 @@ Typed after `:`, like vim.
 | `:autoplay on` · `off` | Same as `M` |
 | `:dl` | Download the playing song |
 | `:clear` | Empty the queue (`u` brings it back) |
-| `:q` · `:qa` | Hide the window · quit the player |
+| `:q` · `:hide` | Quit nāda (the music keeps playing in MPD; the toggle key starts it again) · hide the window |
 
 ## Configuration
 

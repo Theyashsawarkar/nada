@@ -4,10 +4,28 @@ Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
 ## Unreleased
 
+- `:q` closes nāda instead of hiding it (MPD finishes the queue); `:hide` hides, and `q` / `Esc`
+  still do. `nada close` is `nada quit`, and quit makes sure: a player that doesn't
+  answer is stopped through its unit, else SIGTERM, then SIGKILL.
+- The toggle (`nada`) on a window that's open but not focused (on another workspace,
+  behind other windows) brings it here, focused: before, Wayland only marked it
+  urgent, so the key seemed to do nothing. A quick second press closes what the
+  first opened, even before the compositor's focus reaches GTK.
+- SIGTERM (`systemctl --user stop`, logout) and Ctrl+C quit cleanly, as `:q` does;
+  a key pressed while it's quitting no longer opens a window.
+
 - The README and the website cover nāda for Android too: a Download section
   with the desktop app and the phone's APK (coming soon), and "On your phone"
   with the app's screens, its widgets and how it works (no account, history
   and a feed kept on the phone in SQLite, YouTube Music its only connection).
+- "MPD isn't running" when it was: an `MPD_HOST` socket that doesn't exist no
+  longer stops nāda trying `localhost`.
+- Lighter: a closed window and the tabs you aren't looking at no longer rebuild on
+  every MPD event (they catch up when you look); the clock stops while paused or
+  closed, and redraws only when the second or a pixel of the timeline changes; the
+  lyrics aren't laid out twice per song; `j` / `k` touch only the rows that change; a
+  seek doesn't rebuild the queue; the waybar module asks MPD once a second, not at
+  every frame of its animation.
 
 ## v0.3.0 -- 2026-11-09
 

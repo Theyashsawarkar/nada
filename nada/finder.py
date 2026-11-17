@@ -21,8 +21,8 @@ COMMANDS_LIST = [
     ("autoplay", "<on or off>", "More songs after yours"),
     ("dl", "", "Download what's playing"),
     ("clear", "", "Empty the queue (u brings it back)"),
-    ("q", "", "Hide the window"),
-    ("qa", "", "Quit the player"),
+    ("q", "", "Quit nāda (close it; the toggle key opens it again)"),
+    ("hide", "", "Hide the window (keeps running)"),
 ]
 
 

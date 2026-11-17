@@ -3,6 +3,7 @@ and the vim key engine: keymap.py's binds through Vyom's keys.py (counts,
 sequences, the Space leader), plus visual mode, registers, : and /."""
 import logging
 import re
+import time
 
 from gi.repository import Gdk, Gio, GLib, Gtk
 
@@ -38,8 +39,11 @@ class Window(Gtk.ApplicationWindow):
         self.thumbs, self.thumb_wait = {}, set()
         self.thumb_timer = None
         self.toast_timer = None
+        self.shown_at = 0.0
         self.sleep_timer = None
         self.dragging = False
+        self.tick_id = None
+        self.stale, self.chrome_stale = {}, False   # tab -> last event it missed; the rest of the window
 
         overlay = Gtk.Overlay()
         self.set_child(overlay)
@@ -131,7 +135,7 @@ class Window(Gtk.ApplicationWindow):
         ctl.connect("key-pressed", self._key)
         self.add_controller(ctl)
         self.connect("close-request", lambda *_: (self.hide_window(), True)[1])
-        self.connect("notify::visible", lambda *_: setattr(self.core, "window_visible", self.get_visible()))
+        self.connect("notify::visible", lambda *_: self._visibility())
 
         core.listen(self._core_event)
         for v in self.views.values():
@@ -140,7 +144,6 @@ class Window(Gtk.ApplicationWindow):
         self._update_controls()
         self._bar_now()
         self.switch("home")
-        GLib.timeout_add(200, self._tick)
 
     # ------------------------------------------------------------ building
     def _btn(self, glyph, tip, cb, big=False):
@@ -361,6 +364,7 @@ class Window(Gtk.ApplicationWindow):
         if cur and cur.list() is not None and cur.list().vstart is not None:
             cur.list().visual(False)
         self.tab = name
+        self._catch_up()
         self.stack.set_visible_child_name(name)
         for n, b in self.tabbtn.items():
             (b.add_css_class if n == name else b.remove_css_class)("on")
@@ -373,6 +377,7 @@ class Window(Gtk.ApplicationWindow):
         self._hints()
         if self.cmdline.get_visible():
             self._cmd_close()
+        self._tick()
 
     def drop_pending(self):
         """Another tab (or the window hidden): what was waiting goes. A key
@@ -437,12 +442,35 @@ class Window(Gtk.ApplicationWindow):
             if e[0] == "toast":
                 self.toast(e[1])
             return
-        for v in self.views.values():
-            v.refresh(e)
+        # What isn't on screen waits: a seek rebuilt every row of every tab,
+        # with the window closed too. _catch_up does it when it's looked at.
+        visible = self.get_visible()
+        for name, v in self.views.items():
+            if e in v.events:
+                if visible and name == self.tab:
+                    v.refresh(e)
+                else:
+                    self.stale[name] = e
+        if not visible:
+            self.chrome_stale = True
+            return
         self.now.refresh(e)
         if e in ("player", "mixer", "options", "song", "queue", "connection"):
             self._update_controls()
         if e in ("song", "art", "lyrics", "connection"):
+            self._bar_now()
+        if e == "lyrics":
+            self._tick()
+
+    def _catch_up(self):
+        if not self.get_visible():
+            return
+        if self.tab in self.stale:
+            self.views[self.tab].catch_up(self.stale.pop(self.tab))
+        if self.chrome_stale:
+            self.chrome_stale = False
+            self.now.refresh(None)
+            self._update_controls()
             self._bar_now()
 
     def _update_controls(self):
@@ -465,22 +493,43 @@ class Window(Gtk.ApplicationWindow):
         self.progress.set_range(0, max(1, d))
         self.tlen.set_text(fmt_time(d) if d else "–:––")
         self._tick()
+        self._sync_timer()
 
     def _seek_drag(self, scale, scroll, value):
         self.core.seek_to(value)
         return False
 
+    def _sync_timer(self):
+        """The clock runs only while there's something moving to show."""
+        if self.tick_id is None and self.get_visible() and self.core.state == "play":
+            self.tick_id = GLib.timeout_add(200, self._timer)
+
+    def _timer(self):
+        if not self.get_visible() or self.core.state != "play":
+            self.tick_id = None
+            return False
+        self._tick()
+        return True
+
+    def _visibility(self):
+        self.core.window_visible = self.get_visible()
+        self._catch_up()
+        self._sync_timer()
+
     def _tick(self):
-        c = self.core
         if not self.get_visible():
-            return True
-        t = c.elapsed()
-        self.progress.set_value(t)
-        self.tcur.set_text(fmt_time(t))
+            return
+        t = self.core.elapsed()
+        # A redraw only when the handle would move a pixel or the clock changes.
+        width = self.progress.get_width()
+        if not width or abs(t - self.progress.get_value()) * width >= self.progress.get_adjustment().get_upper():
+            self.progress.set_value(t)
+        text = fmt_time(t)
+        if text != self.tcur.get_text():
+            self.tcur.set_text(text)
         if self.tab == "home":
             self.views["home"].tick(t)
         self.now.tick(t)
-        return True
 
     # ------------------------------------------------------------ thumbnails
     def thumb(self, song):
@@ -506,18 +555,24 @@ class Window(Gtk.ApplicationWindow):
     def _thumbs_ready(self):
         self.thumb_timer = None
         self.search.refresh_thumbs()
-        for name in ("queue", "youtube"):
-            self.views[name].refresh("thumbs")
-        self.now.refresh("queue")
+        self._core_event("thumbs")
         return False
 
     # ------------------------------------------------------------ visibility
     def show_window(self):
+        self.shown_at = time.monotonic()
         self.set_visible(True)
         self.present()
         self.root.grab_focus()
         self.core.window_visible = True
         self._tick()
+
+    def bring_back(self):
+        """Open but not focused: unmap and map it again, which every compositor
+        focuses and puts on the current workspace (present() alone only marks
+        it urgent on sway). Nothing pauses: this isn't a hide."""
+        self.set_visible(False)
+        self.show_window()
 
     def hide_window(self):
         self.drop_pending()
@@ -865,9 +920,9 @@ class Window(Gtk.ApplicationWindow):
                 self.switch("playlists")
             else:
                 c.load_playlist(arg, "replace")
-        elif cmd in ("q", "hide"):
+        elif cmd == "hide":
             self.hide_window()
-        elif cmd in ("qa", "quit"):
+        elif cmd in ("q", "q!", "qa", "qa!", "quit", "close"):   # :q quits, as in vim
             self.app.quit_all()
         elif cmd in ("yt", "youtube"):
             if arg:

@@ -38,6 +38,7 @@ def section(text, right=None):
 class View:
     name = title = glyph = ""
     hints = []
+    events = ()     # the core events refresh() acts on
 
     def __init__(self, win):
         self.win, self.core = win, win.core
@@ -58,6 +59,10 @@ class View:
     def shown(self):
         pass
 
+    def catch_up(self, event):
+        """Its events came while it wasn't on screen; event is the last one."""
+        self.refresh(event)
+
     def thumb_or_tile(self, song, size=38):
         key = song.get("yt") or song.get("yt_hint") or (song.get("album") and f"{song.get('artist')}|{song['album']}") or song.get("file", "")
         path = self.win.thumb(song)
@@ -71,6 +76,7 @@ class Home(View):
     they came from and how they're shown; Space l l opens the lyrics panel."""
     name, title, glyph = "home", "Now", G["home"]
     hints = [("p", "play"), (", .", "±10 s"), ("Space l l", "lyrics panel"), ("/", "search"), ("Space", "more")]
+    events = ("lyrics", "song", "connection")
 
     def __init__(self, win):
         super().__init__(win)
@@ -133,15 +139,20 @@ class Home(View):
 class Queue(View):
     name, title, glyph = "queue", "Queue", G["queue"]
     hints = [("Enter", "play"), ("dd", "remove"), ("J K", "move"), ("gp", "paste"), ("Space u l", "lyrics"), ("Space", "more")]
+    events = ("queue", "player", "song", "downloads", "options", "thumbs")
 
     def __init__(self, win):
         super().__init__(win)
         self.rows = RowList(on_activate=lambda s: self.core.play_pos(s["pos"]))
         self.widget = self.rows
         self.matches, self.mi = [], 0
+        self.built = None    # (queue, position, state) the rows show
 
     def list(self):
         return self.rows
+
+    def catch_up(self, event):
+        self.refresh(None)   # whatever was missed, not only the last event
 
     def row(self, s, playing, past):
         c = self.core
@@ -185,8 +196,10 @@ class Queue(View):
         p = c.cur_pos
         rows = []
         q = c.queue
-        if not q:
-            rows = []
+        # a seek is a "player" event too, and a new song comes as two events
+        if event in ("player", "song") and self.built and self.built[0] is q and self.built[1:] == (p, c.state):
+            return
+        self.built = (q, p, c.state)
         for s in q:
             i = s["pos"]
             if i == 0 and p > 0:
@@ -336,6 +349,8 @@ class Library(View):
 
     def list(self):
         return self.cols[self.focus]
+
+    events = ("database",)
 
     def shown(self):
         if not self.loaded:
@@ -578,6 +593,8 @@ class YouTube(View):
                       justify=Gtk.Justification.CENTER)
         self.rows.set_rows(rows, empty=empty)
 
+    events = ("thumbs", "queue")
+
     def refresh(self, event=None):
         if event in ("thumbs", "queue") and self.results:
             self._fill()
@@ -622,6 +639,8 @@ class Playlists(View):
 
     def list(self):
         return self.left if self.focus == 0 else self.right
+
+    events = ("playlists", "connection")
 
     def shown(self):
         self.refresh("playlists")
@@ -701,6 +720,8 @@ class Downloads(View):
 
     def list(self):
         return self.rows
+
+    events = ("downloads",)
 
     def shown(self):
         self.refresh("downloads")
@@ -818,7 +839,7 @@ class NowPane(Gtk.Box):
                 pic = label(G["note"], "cover cover-glyph", xalign=0.5, ellipsize=False)
                 pic.set_size_request(self.cover_size, self.cover_size)
             self.cover_box.append(pic)
-        if event in (None, "song", "queue", "player", "options", "downloads", "connection", "lyrics"):
+        if event in (None, "song", "queue", "player", "options", "downloads", "connection", "lyrics", "thumbs"):
             m = c.lyrics.get("meta") if s and c.lyrics.get("for") == s["id"] else None
             self.title.set_text((m or {}).get("title") or s["title"] if s else
                                 ("Nothing playing" if c.connected else c.error or "Connecting…"))
@@ -914,6 +935,8 @@ class NowPane(Gtk.Box):
     def tick(self, t):
         if self.stack.get_visible_child_name() == "lyrics":
             self.lyrics.update(t)
+        if not self.lyric.get_visible():
+            return
         line = self.lyrics.current_text(t)
-        if line:
-            self.lyric.set_text(f"{G['mic']}  {line}")
+        if line and self.lyric.get_text() != (text := f"{G['mic']}  {line}"):
+            self.lyric.set_text(text)

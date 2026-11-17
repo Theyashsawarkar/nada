@@ -226,7 +226,7 @@ PANELS = [
 ]
 
 COMMANDS = ":w <name> save the queue · :e <name> load a playlist · :yt <search> · :play <search> · :sleep 30m · " \
-           ":vol 40 · :seek 1:30 · :lyrics <search> · :autoplay on/off · :clear · :dl · :q · :qa"
+           ":vol 40 · :seek 1:30 · :lyrics <search> · :autoplay on/off · :clear · :dl · :q (quit) · :hide"
 
 
 def _with_when(sections):

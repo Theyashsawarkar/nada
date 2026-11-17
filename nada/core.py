@@ -925,7 +925,6 @@ class Core:
         except OSError:
             pass
         self.emit("downloads")
-        self.emit("queue")
 
     def _next_download(self):
         if self.dl_running:

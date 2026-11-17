@@ -12,12 +12,16 @@ class MPDError(Exception):
 
 def address():
     """(host or socket path, port, password) from MPD_HOST / MPD_PORT, else
-    MPD's usual socket in $XDG_RUNTIME_DIR, else localhost:6600."""
+    MPD's usual socket in $XDG_RUNTIME_DIR, else localhost:6600. An MPD_HOST
+    socket that isn't there counts as unset: a missing socket doesn't mean
+    MPD isn't listening on TCP."""
     host = os.environ.get("MPD_HOST") or ""
     port = int(os.environ.get("MPD_PORT") or 6600)
     password = None
     if "@" in host and not host.startswith("@"):
         password, host = host.rsplit("@", 1)
+    if host.startswith("/") and not os.path.exists(host):
+        host = ""
     if not host:
         sock = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}", "mpd", "socket")
         host = sock if os.path.exists(sock) else "localhost"

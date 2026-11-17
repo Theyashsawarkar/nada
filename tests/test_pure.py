@@ -3,11 +3,12 @@ import os
 import sys
 import time
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from nada import lyrics, youtube  # noqa: E402
-from nada.mpd import quote, split_items  # noqa: E402
+from nada.mpd import address, quote, split_items  # noqa: E402
 
 
 class YouTubeTitles(unittest.TestCase):
@@ -67,6 +68,14 @@ class Protocol(unittest.TestCase):
     def test_split_items(self):
         items = split_items([("file", "a.mp3"), ("Title", "A"), ("file", "b.mp3"), ("Title", "B")])
         self.assertEqual([i["Title"] for i in items], ["A", "B"])
+
+    def test_missing_socket_falls_back_to_tcp(self):
+        with mock.patch.dict(os.environ, {"MPD_HOST": "/nowhere/mpd/socket", "XDG_RUNTIME_DIR": "/nowhere"}):
+            self.assertEqual(address()[0], "localhost")
+
+    def test_existing_socket_is_used(self):
+        with mock.patch.dict(os.environ, {"MPD_HOST": __file__}):
+            self.assertEqual(address()[0], __file__)
 
 
 if __name__ == "__main__":

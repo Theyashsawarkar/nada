@@ -1,0 +1,54 @@
+{
+  "name": "@nada/mobile",
+  "version": "0.0.1",
+  "private": true,
+  "description": "nāda for Android: YouTube Music with no account; history, taste and feed kept on the phone in SQLite.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "live": "LIVE=1 vitest run",
+    "start": "expo start",
+    "android": "expo run:android"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3",
+    "vitest": "5.0.5"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "@expo-google-fonts/inter": "0.4.1",
+    "@expo-google-fonts/space-grotesk": "0.4.1",
+    "expo": "~58.0.19",
+    "expo-asset": "~58.0.18",
+    "expo-audio": "~58.0.11",
+    "expo-blur": "~58.0.5",
+    "expo-build-properties": "~58.0.11",
+    "expo-constants": "~58.0.13",
+    "expo-file-system": "~58.0.11",
+    "expo-font": "~58.0.10",
+    "expo-image": "~58.0.18",
+    "expo-linear-gradient": "~58.0.3",
+    "expo-linking": "~58.0.14",
+    "expo-network": "~58.0.4",
+    "expo-router": "~58.0.26",
+    "expo-splash-screen": "~58.0.11",
+    "expo-sqlite": "~58.0.14",
+    "expo-status-bar": "~58.0.4",
+    "expo-system-ui": "~58.0.6",
+    "react": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-gesture-handler": "~3.3.0",
+    "react-native-reanimated": "4.7.1",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-svg": "15.16.0",
+    "react-native-worklets": "0.13.0"
+  }
+}

@@ -58,8 +58,9 @@ class Mini(Gtk.Window):
         keys.connect("key-pressed", self._key)
         self.add_controller(keys)
         core.listen(self._event)
+        self.tick_id = None
+        self.connect("notify::visible", lambda *_: self._event(None))
         self._event(None)
-        GLib.timeout_add(250, self._tick)
 
     def _btn(self, glyph, cb, big=False):
         b = Gtk.Button()
@@ -72,8 +73,8 @@ class Mini(Gtk.Window):
         return b
 
     def _event(self, e):
-        if isinstance(e, tuple):
-            return
+        if isinstance(e, tuple) or not self.get_visible():
+            return   # shown again, it starts over with _event(None)
         c = self.core
         s = c.current
         if e in (None, "song", "art", "connection"):
@@ -92,14 +93,26 @@ class Mini(Gtk.Window):
         d = c.duration()
         self.progress.set_range(0, max(1, d))
         self.tlen.set_text(fmt_time(d))
+        self._tick()
+        if self.tick_id is None and c.state == "play":
+            self.tick_id = GLib.timeout_add(250, self._timer)
+
+    def _timer(self):
+        if not self.get_visible() or self.core.state != "play":
+            self.tick_id = None
+            return False
+        self._tick()
+        return True
 
     def _tick(self):
-        if not self.get_visible():
-            return True
         c = self.core
         t = c.elapsed()
-        self.progress.set_value(t)
-        self.tcur.set_text(fmt_time(t))
+        width = self.progress.get_width()
+        if not width or abs(t - self.progress.get_value()) * width >= self.progress.get_adjustment().get_upper():
+            self.progress.set_value(t)
+        text = fmt_time(t)
+        if text != self.tcur.get_text():
+            self.tcur.set_text(text)
         lines = c.lyrics.get("lines") or []
         txt = ""
         if c.lyrics.get("synced"):
@@ -108,9 +121,10 @@ class Mini(Gtk.Window):
                     txt = x
                 else:
                     break
-        self.lyric.set_text(f"{G['mic']}  {txt}" if txt.strip() else "")
-        self.lyric.set_visible(bool(txt.strip()))
-        return True
+        text = f"{G['mic']}  {txt}" if txt.strip() else ""
+        if text != self.lyric.get_text():
+            self.lyric.set_text(text)
+            self.lyric.set_visible(bool(text))
 
     def _key(self, ctrl, keyval, code, state):
         name = Gdk.keyval_name(keyval)

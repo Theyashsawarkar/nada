@@ -108,6 +108,7 @@ def texture(path, size):
     """A square-cropped texture of an image file (cached)."""
     key = (path, size)
     if key in _textures:
+        _textures[key] = _textures.pop(key)   # the newest last: the oldest go first
         return _textures[key]
     try:
         pb = GdkPixbuf.Pixbuf.new_from_file(path)
@@ -117,8 +118,8 @@ def texture(path, size):
     s = min(w, h)
     pb = pb.new_subpixbuf((w - s) // 2, (h - s) // 2, s, s).scale_simple(size, size, GdkPixbuf.InterpType.BILINEAR)
     t = Gdk.Texture.new_for_pixbuf(pb)
-    if len(_textures) > 400:
-        _textures.clear()
+    if len(_textures) >= 400:
+        del _textures[next(iter(_textures))]
     _textures[key] = t
     return t
 
@@ -147,6 +148,7 @@ class RowList(Gtk.ScrolledWindow):
         self.set_child(self.inner)
         self.items, self.widgets = [], []
         self.sel, self.vstart = 0, None
+        self.painted = {"sel": set(), "vis": set()}
         self.on_activate, self.on_select = on_activate, on_select
         self.placeholder = None
 
@@ -159,6 +161,7 @@ class RowList(Gtk.ScrolledWindow):
             self.inner.remove(child)
             child = nxt
         self.items, self.widgets = [], []
+        self.painted = {"sel": set(), "vis": set()}
         for r in rows:
             if r[0] == "header":
                 self.inner.append(r[1])
@@ -193,10 +196,15 @@ class RowList(Gtk.ScrolledWindow):
         return list(range(lo, hi + 1))
 
     def _paint(self):
-        rng = set(self.range()) if self.vstart is not None else set()
-        for i, w in enumerate(self.widgets):
-            (w.add_css_class if i == self.sel else w.remove_css_class)("sel")
-            (w.add_css_class if i in rng else w.remove_css_class)("vis")
+        """Touches only the rows that change: this runs on every j and k."""
+        want = {"sel": {self.sel} if self.widgets else set(),
+                "vis": set(self.range()) if self.vstart is not None else set()}
+        for cls, rows in want.items():
+            for i in self.painted[cls] - rows:
+                self.widgets[i].remove_css_class(cls)
+            for i in rows - self.painted[cls]:
+                self.widgets[i].add_css_class(cls)
+        self.painted = want
 
     def select(self, i, scroll=True):
         if not self.items:
@@ -269,6 +277,9 @@ class LyricsView(Gtk.Box):
             GLib.idle_add(lambda: (self._center(self.cur), False)[1])
 
     def set(self, data, key=None, message=None):
+        lines = data.get("lines") if data else None
+        if lines and not message and lines is self.lines and bool(data.get("synced")) == self.synced:
+            return   # already showing exactly these: events come in pairs
         self.key = key
         child = self.inner.get_first_child()
         while child:
