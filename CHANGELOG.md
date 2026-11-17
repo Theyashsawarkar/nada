@@ -2,7 +2,7 @@
 
 Newest first. Releases are tags (`vX.Y.Z`) with `VERSION` in `nada/__init__.py`.
 
-## Unreleased
+## v0.4.0 -- 2026-11-17
 
 - `:q` closes nāda instead of hiding it (MPD finishes the queue); `:hide` hides, and `q` / `Esc`
   still do. `nada close` is `nada quit`, and quit makes sure: a player that doesn't
